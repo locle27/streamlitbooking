@@ -1,0 +1,8 @@
+streamlit
+pandas
+numpy
+plotly
+openpyxl
+xlrd
+pypdf2
+beautifulsoup4
