@@ -798,7 +798,6 @@ elif st.session_state.df is None and st.session_state.data_source != 'error_load
         # MODIFICATION START: Load credentials from Streamlit secrets if available
         if "GCP_SERVICE_ACCOUNT_JSON" in st.secrets:
             creds_json_str = st.secrets["GCP_SERVICE_ACCOUNT_JSON"]
-            st.error(f"DEBUG: GCP_SERVICE_ACCOUNT_JSON in import_from_gsheet: ---{creds_json_str}---") # DEBUG LINE
             creds_info = json.loads(creds_json_str)
             creds = Credentials.from_service_account_info(creds_info, scopes=scope)
         elif creds_path and os.path.exists(creds_path): # Fallback to local file if secret not found (for local dev)
@@ -1973,7 +1972,6 @@ def upload_to_gsheet(df, sheet_id, creds_path, worksheet_name=None):
     # MODIFICATION START: Load credentials from Streamlit secrets if available
     if "GCP_SERVICE_ACCOUNT_JSON" in st.secrets:
         creds_json_str = st.secrets["GCP_SERVICE_ACCOUNT_JSON"]
-        st.error(f"DEBUG: GCP_SERVICE_ACCOUNT_JSON in upload_to_gsheet: ---{creds_json_str}---") # DEBUG LINE
         creds_info = json.loads(creds_json_str)
         creds = Credentials.from_service_account_info(creds_info, scopes=scope)
     elif creds_path and os.path.exists(creds_path): # Fallback to local file if secret not found
@@ -2045,7 +2043,6 @@ if st.session_state.get('df') is not None and not st.session_state['df'].empty:
         # MODIFICATION START: Load credentials from Streamlit secrets if available
         if "GCP_SERVICE_ACCOUNT_JSON" in st.secrets:
             creds_json_str = st.secrets["GCP_SERVICE_ACCOUNT_JSON"]
-            st.error(f"DEBUG: GCP_SERVICE_ACCOUNT_JSON in sidebar import_from_gsheet: ---{creds_json_str}---") # DEBUG LINE
             creds_info = json.loads(creds_json_str)
             creds_func = Credentials.from_service_account_info(creds_info, scopes=scope)
         elif creds_path_func and os.path.exists(creds_path_func): # Fallback to local file
@@ -2074,7 +2071,6 @@ if st.session_state.get('df') is not None and not st.session_state['df'].empty:
         # MODIFICATION START: Load credentials from Streamlit secrets if available
         if "GCP_SERVICE_ACCOUNT_JSON" in st.secrets:
             creds_json_str = st.secrets["GCP_SERVICE_ACCOUNT_JSON"]
-            st.error(f"DEBUG: GCP_SERVICE_ACCOUNT_JSON in append_guest_to_gsheet: ---{creds_json_str}---") # DEBUG LINE
             creds_info = json.loads(creds_json_str)
             creds = Credentials.from_service_account_info(creds_info, scopes=scope)
         elif creds_path and os.path.exists(creds_path): # Fallback to local file
