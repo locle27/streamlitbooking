@@ -798,6 +798,7 @@ elif st.session_state.df is None and st.session_state.data_source != 'error_load
         # MODIFICATION START: Load credentials from Streamlit secrets if available
         if "GCP_SERVICE_ACCOUNT_JSON" in st.secrets:
             creds_json_str = st.secrets["GCP_SERVICE_ACCOUNT_JSON"]
+            st.error(f"DEBUG (Initial import_from_gsheet MAIN): GCP_SERVICE_ACCOUNT_JSON is {len(creds_json_str)} chars long.") # ENSURED DEBUG LINE
             creds_info = json.loads(creds_json_str)
             creds = Credentials.from_service_account_info(creds_info, scopes=scope)
         elif creds_path and os.path.exists(creds_path): # Fallback to local file if secret not found (for local dev)
@@ -1101,7 +1102,7 @@ with tab_dashboard:
 
 # --- TAB LỊCH PHÒNG ---
 with tab_calendar:
-    st.header("� Lịch phòng tổng quan")
+    st.header(" Lịch phòng tổng quan")
     st.subheader("Tổng quan phòng trống")
     if active_bookings is not None:
         today_date = datetime.date.today(); tomorrow_date = today_date + timedelta(days=1)
@@ -2044,6 +2045,7 @@ if st.session_state.get('df') is not None and not st.session_state['df'].empty:
         # MODIFICATION START: Load credentials from Streamlit secrets if available
         if "GCP_SERVICE_ACCOUNT_JSON" in st.secrets:
             creds_json_str = st.secrets["GCP_SERVICE_ACCOUNT_JSON"]
+            st.error(f"DEBUG (Sidebar import_from_gsheet): GCP_SERVICE_ACCOUNT_JSON is {len(creds_json_str)} chars long.") # DEBUG LINE
             creds_info = json.loads(creds_json_str)
             creds_func = Credentials.from_service_account_info(creds_info, scopes=scope)
         elif creds_path_func and os.path.exists(creds_path_func): # Fallback to local file
