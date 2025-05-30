@@ -2094,6 +2094,54 @@ if st.session_state.get('df') is not None and not st.session_state['df'].empty:
         worksheet.append_row(row_to_append, value_input_option='USER_ENTERED')
         return sh.url
 
+    def append_all_guests_to_gsheet(df_to_append, sheet_id_func, creds_path_func, worksheet_name_func=None):
+        """
+        Appends all rows from a DataFrame to a specific Google Sheet.
+        """
+        if df_to_append is None or df_to_append.empty:
+            st.sidebar.warning("Không có dữ liệu để thêm vào Google Sheet.")
+            return None
+
+        scope = [
+            'https://www.googleapis.com/auth/spreadsheets',
+            'https://www.googleapis.com/auth/drive',
+        ]
+        creds_append_all = None
+        if "GCP_SERVICE_ACCOUNT_JSON" in st.secrets:
+            creds_json_str = st.secrets["GCP_SERVICE_ACCOUNT_JSON"]
+            st.error(f"DEBUG (append_all_guests_to_gsheet): GCP_SERVICE_ACCOUNT_JSON is {len(creds_json_str)} chars long.") # DEBUG LINE
+            creds_info = json.loads(creds_json_str)
+            creds_append_all = Credentials.from_service_account_info(creds_info, scopes=scope)
+        elif creds_path_func and os.path.exists(creds_path_func):
+            creds_append_all = Credentials.from_service_account_file(creds_path_func, scopes=scope)
+        else:
+            st.sidebar.error("Google Sheets credentials not found for appending all guests. Please set GCP_SERVICE_ACCOUNT_JSON secret or ensure local creds_path is valid.")
+            raise Exception("Credentials not found for append_all_guests_to_gsheet")
+
+        gc = gspread.authorize(creds_append_all)
+        sh = gc.open_by_key(sheet_id_func)
+        
+        if worksheet_name_func:
+            try:
+                worksheet = sh.worksheet(worksheet_name_func)
+            except gspread.WorksheetNotFound:
+                st.sidebar.error(f"Worksheet '{worksheet_name_func}' không tìm thấy. Vui lòng tạo worksheet trước hoặc kiểm tra lại tên.")
+                return None # Or create it: worksheet = sh.add_worksheet(title=worksheet_name_func, rows="100", cols=max(20, len(df_to_append.columns)))
+        else:
+            worksheet = sh.sheet1 # Default to first sheet
+
+        # Convert all data to string to avoid gspread issues with types like Timestamps
+        list_of_lists_to_append = []
+        for row_tuple in df_to_append.itertuples(index=False, name=None):
+            list_of_lists_to_append.append([str(item) for item in row_tuple])
+        
+        if not list_of_lists_to_append:
+            st.sidebar.info("Không có hàng nào để thêm sau khi chuyển đổi.")
+            return sh.url
+
+        worksheet.append_rows(list_of_lists_to_append, value_input_option='USER_ENTERED')
+        return sh.url
+
     if st.sidebar.button("⬆️ Upload lên Google Sheets", key="upload_gsheet_btn"):
         try:
             url = upload_to_gsheet(st.session_state['df'], sheet_id, creds_path_sidebar, worksheet_name)
@@ -2115,6 +2163,24 @@ if st.session_state.get('df') is not None and not st.session_state['df'].empty:
             st.sidebar.error(f"Lỗi: File credentials Google Sheets ('{creds_path_sidebar}') không tìm thấy. Vui lòng kiểm tra lại đường dẫn.")
         except Exception as e:
             st.sidebar.error(f"Lỗi khi thêm khách: {e}")
+
+    if st.sidebar.button("➕➕ Thêm TẤT CẢ khách vào Google Sheets", key="append_all_guests_gsheet_btn"):
+        try:
+            if st.session_state['df'] is not None and not st.session_state['df'].empty:
+                # Ensure all necessary columns for the sheet are present in df
+                # This might require aligning df columns with expected sheet columns
+                # For simplicity, we assume df is already correctly structured.
+                url = append_all_guests_to_gsheet(st.session_state['df'], sheet_id, creds_path_sidebar, worksheet_name)
+                if url: # append_all_guests_to_gsheet returns None on some errors
+                    st.sidebar.success(f"Đã thêm TẤT CẢ {len(st.session_state['df'])} khách vào Google Sheet! [Mở Google Sheet]({url})")
+            else:
+                st.sidebar.warning("Không có dữ liệu khách để thêm.")
+        except FileNotFoundError:
+            st.sidebar.error(f"Lỗi: File credentials Google Sheets ('{creds_path_sidebar}') không tìm thấy.")
+        except Exception as e:
+            st.sidebar.error(f"Lỗi khi thêm tất cả khách: {e}")
+            st.error(f"Chi tiết lỗi append all: {traceback.format_exc()}")
+
 
     if st.sidebar.button("⬇️ Tải dữ liệu từ Google Sheets", key="import_gsheet_btn"):
         try:
