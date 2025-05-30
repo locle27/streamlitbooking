@@ -24,6 +24,7 @@ import xlrd # Cần thiết cho file .xls cũ
 import openpyxl # Cần thiết cho file .xlsx hiện đại
 import csv
 from typing import Dict, List, Optional, Tuple, Any
+import json
 
 # Google Sheets API imports
 import gspread
@@ -92,7 +93,80 @@ st.markdown("""
     .dataframe { border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
     .loading-spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary-color); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center; font-family: 'Segoe UI', sans-serif; } .day-header { font-weight: bold; padding: 8px 0; background-color: #e9ecef; color: #495057; border-radius: 5px; font-size: 0.9em; } .day-cell { border: 1px solid #dee2e6; padding: 8px 2px; min-height: 75px; display: flex; flex-direction: column; justify-content: space-between; align-items: center; border-radius: 5px; cursor: pointer; transition: background-color 0.2s, box-shadow 0.2s; position: relative; background-color: #fff; } .day-cell:hover { background-color: #f8f9fa; box-shadow: 0 0 5px rgba(0,0,0,0.1); } .day-button-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; z-index: 10; cursor: pointer; } .day-number { font-size: 1.1em; font-weight: bold; margin-bottom: 3px; color: #343a40; } .day-status { font-size: 0.75em; color: #6c757d; padding: 0 2px; word-break: break-word; } .dot-indicator { font-size: 1.8em; line-height: 0.5; margin-top: -2px; margin-bottom: 2px; } .dot-green { color: var(--success-color); } .dot-orange { color: var(--warning-color); } .dot-red { color: var(--danger-color); } .day-disabled { color: #adb5bd; background-color: #f1f3f5; cursor: not-allowed; } .day-today { border: 2px solid var(--primary-color); background-color: #e7f3ff; } .day-selected { background-color: #cfe2ff; border: 2px solid #0a58ca; box-shadow: 0 0 8px rgba(10, 88, 202, 0.3); } .guest-separator { border-bottom: 1px dashed #ced4da; margin: 4px 0; width: 90%; align-self: center; } .calendar-details-expander .streamlit-expanderHeader { font-size: 1.1em; font-weight: bold; } .calendar-details-expander p { margin-bottom: 0.3rem; }
+    .calendar-grid {
+        display: grid; grid-template-columns: repeat(7, 1fr);
+        gap: 12px; /* Further increased gap for more horizontal space */
+        text-align: center; font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+        margin-top: 20px; /* Increased top margin */
+        padding: 10px; /* Increased padding around the grid */
+        background-color: #f9f9f9;
+        border-radius: 10px;
+    }
+    .day-header {
+        font-weight: 500;
+        padding: 12px 0;
+        background-color: transparent;
+        color: #4a5568;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    .day-cell {
+        border: 1px solid #e2e8f0;
+        padding: 8px 4px; /* Adjusted cell padding */
+        min-height: 90px; /* Increased cell min-height */
+        display: flex; flex-direction: column; justify-content: space-between; align-items: center;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+        position: relative;
+        background-color: #ffffff;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+    .day-cell:hover {
+        background-color: #f7fafc;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+        transform: translateY(-1px);
+    }
+    .day-button-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; z-index: 10; cursor: pointer; }
+    .day-number { 
+        font-size: 1.1em; /* Slightly adjusted size for professionalism */ 
+        font-weight: 500; /* Maintained medium weight */ 
+        margin-bottom: 5px; 
+        color: #2d3748; 
+    }
+    .day-status { font-size: 0.75em; color: #718096; padding: 0 2px; word-break: break-word; line-height: 1.35; }
+    .dot-indicator { font-size: 1.9em; line-height: 0.3; margin-top: 1px; margin-bottom: 2px; }
+    .dot-green { color: var(--success-color); }
+    .dot-orange { color: var(--warning-color); }
+    .dot-red { color: var(--danger-color); }
+    .day-disabled {
+        color: #a0aec0; /* Lighter gray for disabled text */
+        background-color: #edf2f7; /* Very light gray for disabled background */
+        cursor: not-allowed; box-shadow: none;
+        border-color: #e2e8f0;
+    }
+    .day-disabled:hover { transform: none; background-color: #edf2f7; }
+    .day-today {
+        border: 2px solid var(--primary-color);
+        background-color: #ebf8ff; /* Light primary color background (Tailwind-like blue) */
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 0 0 1px var(--primary-color); /* Inner and outer emphasis */
+    }
+    .day-today .day-number { color: var(--primary-color); font-weight: 600; /* Bolder for today's number */ }
+    .day-selected {
+        background-color: var(--primary-color);
+        border: 2px solid var(--primary-color);
+        box-shadow: 0 3px 10px rgba(31, 119, 180, 0.5); /* Stronger shadow for selected */
+        color: white;
+        transform: translateY(-1px); /* Keep slight lift */
+    }
+    .day-selected .day-number, .day-selected .day-status, .day-selected .dot-indicator {
+        color: white;
+    }
+    .guest-separator { border-bottom: 1px dashed #ced4da; margin: 4px 0; width: 90%; align-self: center; }
+    .calendar-details-expander .streamlit-expanderHeader { font-size: 1.1em; font-weight: bold; }
+    .calendar-details-expander p { margin-bottom: 0.3rem; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -686,6 +760,9 @@ if "add_form_check_in_final" not in st.session_state:
 if "add_form_check_out_final" not in st.session_state:
     st.session_state.add_form_check_out_final = datetime.date.today() + timedelta(days=1)
 
+if 'customer_html_data' not in st.session_state: # Thêm session state cho dữ liệu khách hàng từ HTML
+    st.session_state.customer_html_data = None
+
 
 # --- GIAO DIỆN NGƯỜI DÙNG (UI) & LOGIC TẢI DỮ LIỆU ---
 st.sidebar.title("🏨 Quản lý phòng")
@@ -718,7 +795,17 @@ elif st.session_state.df is None and st.session_state.data_source != 'error_load
             'https://www.googleapis.com/auth/spreadsheets',
             'https://www.googleapis.com/auth/drive',
         ]
-        creds = Credentials.from_service_account_file(creds_path, scopes=scope)
+        # MODIFICATION START: Load credentials from Streamlit secrets if available
+        if "GCP_SERVICE_ACCOUNT_JSON" in st.secrets:
+            creds_json_str = st.secrets["GCP_SERVICE_ACCOUNT_JSON"]
+            creds_info = json.loads(creds_json_str)
+            creds = Credentials.from_service_account_info(creds_info, scopes=scope)
+        elif creds_path and os.path.exists(creds_path): # Fallback to local file if secret not found (for local dev)
+            creds = Credentials.from_service_account_file(creds_path, scopes=scope)
+        else:
+            st.error("Google Sheets credentials not found. Please set GCP_SERVICE_ACCOUNT_JSON secret in Streamlit Cloud or provide a valid local creds_path.")
+            return pd.DataFrame() # Return empty DataFrame on credential error
+        # MODIFICATION END
         gc = gspread.authorize(creds)
         sh = gc.open_by_key(sheet_id)
         if worksheet_name:
@@ -730,7 +817,46 @@ elif st.session_state.df is None and st.session_state.data_source != 'error_load
             return pd.DataFrame()
         df = pd.DataFrame(data[1:], columns=data[0])
         return df
-    creds_path = "streamlit-api-461302-5dfbcb4beaba.json"
+
+    # Construct path relative to the script file
+    try:
+        import os # Attempt to import os here if not already globally available
+        
+        # Define the credentials filename
+        creds_filename = "streamlit-api-461302-5dfbcb4beaba.json"
+        
+        # Initial assumption: creds_path is just the filename (implies it's in CWD or PATH)
+        creds_path = creds_filename
+        
+        # Attempt to find the file in the script's directory
+        try:
+            script_dir = os.path.dirname(__file__)
+            path_in_script_dir = os.path.join(script_dir, creds_filename)
+            if os.path.exists(path_in_script_dir):
+                creds_path = path_in_script_dir
+                st.info(f"Using credentials from script directory: {creds_path}")
+        except NameError: # __file__ might not be defined
+            st.warning(f"__file__ not defined. Cannot check script directory for credentials.")
+
+        # If not found in script_dir (or __file__ was undefined), check the current working directory
+        if not os.path.exists(creds_path):
+            current_working_directory = os.getcwd()
+            path_in_cwd = os.path.join(current_working_directory, creds_filename)
+            if os.path.exists(path_in_cwd):
+                creds_path = path_in_cwd
+                st.info(f"Using credentials from CWD: {creds_path}")
+            else:
+                # If still not found, log a warning. The gspread call will likely fail.
+                st.warning(f"Credentials file '{creds_filename}' not found in script directory or CWD. Will attempt to load using '{creds_path}' which may fail if not in Python's path or accessible.")
+
+    except ImportError:
+        creds_path = "streamlit-api-461302-5dfbcb4beaba.json" # Fallback if os module cannot be imported
+        st.error("Could not import 'os' module. Critical for locating credentials. Using fallback relative path for credentials, which may not work.")
+    except Exception as e_path:
+        creds_path = "streamlit-api-461302-5dfbcb4beaba.json" # General fallback
+        st.error(f"An unexpected error occurred during credential path construction: {e_path}. Using fallback relative path.")
+
+
     default_sheet_id = "13kQETOUGCVUwUqZrxeLy-WAj3b17SugI4L8Oq09SX2w"
     worksheet_name = "BookingManager"
     df_gsheet = import_from_gsheet(default_sheet_id, creds_path, worksheet_name)
@@ -774,51 +900,160 @@ min_date_val = (df['Check-in Date'].min().date() if df is not None and not df.em
 max_date_val = (df['Check-out Date'].max().date() if df is not None and not df.empty and 'Check-out Date' in df.columns and not df['Check-out Date'].dropna().empty else default_max_date)
 
 
+# --- Function to display day details in a dialog ---
+@st.dialog("🗓️ Chi tiết hoạt động ngày")
+def show_day_details_modal(date_to_show):
+    st.subheader(f"{date_to_show.strftime('%A, %d/%m/%Y')}")
+    # Ensure active_bookings is available from session_state for the dialog
+    active_bookings_for_dialog = st.session_state.get('active_bookings')
+    if active_bookings_for_dialog is None:
+        st.error("Lỗi: Không tìm thấy dữ liệu đặt phòng đang hoạt động.")
+        if st.button("Đóng", key=f"close_day_details_modal_error_{date_to_show.strftime('%Y%m%d')}"):
+            st.rerun()
+        return
+
+    daily_activity_data = get_daily_activity(date_to_show, active_bookings_for_dialog)
+
+    if not daily_activity_data['check_in'] and not daily_activity_data['check_out'] and not daily_activity_data['occupied']:
+        st.info("Không có hoạt động nào cho ngày này.")
+    else:
+        col_checkin, col_checkout, col_occupied = st.columns(3)
+        with col_checkin:
+            st.markdown("##### 🛬 Check-in")
+            if daily_activity_data['check_in']:
+                st.success(f"{len(daily_activity_data['check_in'])} lượt")
+                for guest in daily_activity_data['check_in']:
+                    st.markdown(f"- **{guest.get('name','N/A')}**")
+                    st.caption(f"  {guest.get('room_type','N/A')}, Mã ĐP: {guest.get('booking_id','N/A')}")
+            else: st.caption("Không có.")
+        with col_checkout:
+            st.markdown("##### 🛫 Check-out")
+            if daily_activity_data['check_out']:
+                st.warning(f"{len(daily_activity_data['check_out'])} lượt")
+                for guest in daily_activity_data['check_out']:
+                    st.markdown(f"- **{guest.get('name','N/A')}**")
+                    st.caption(f"  {guest.get('room_type','N/A')}, Mã ĐP: {guest.get('booking_id','N/A')}")
+            else: st.caption("Không có.")
+        with col_occupied:
+            st.markdown("##### 🏨 Đang ở")
+            if daily_activity_data['occupied']:
+                st.info(f"{len(daily_activity_data['occupied'])} lượt")
+                for guest in daily_activity_data['occupied']:
+                    check_in_str = guest['check_in'].strftime('%d/%m') if guest['check_in'] else 'N/A'
+                    check_out_str = guest['check_out'].strftime('%d/%m') if guest['check_out'] else 'N/A'
+                    total_payment_val = guest.get('total_payment', 0.0)
+                    total_payment_str = f"{total_payment_val:,.0f}" if pd.notna(total_payment_val) and total_payment_val != 0.0 else "0"
+                    st.markdown(f"- **{guest.get('name','N/A')}**")
+                    st.caption(f"  {guest.get('room_type','N/A')}, {check_in_str} - {check_out_str}, TT: {total_payment_str}")
+                    if len(daily_activity_data['occupied']) > 1 : st.markdown("<div class='guest-separator'></div>", unsafe_allow_html=True)
+            else: st.caption("Không có.")
+    st.markdown("---")
+    if st.button("Đóng", key=f"close_day_details_modal_{date_to_show.strftime('%Y%m%d')}"):
+        st.rerun() # Simply rerun to close the dialog implicitly
+
 # --- CÁC TAB CHỨC NĂNG ---
-tab_titles = ["📊 Dashboard", "📅 Lịch phòng", "📋 Quản lý đặt phòng", "📈 Phân tích", "➕ Thêm đặt phòng", "💌 Mẫu tin nhắn"]
-tab_dashboard, tab_calendar, tab_booking_mgmt, tab_analytics, tab_add_booking, tab_message_templates = st.tabs(tab_titles)
+tab_titles = ["📊 Dashboard", "📅 Lịch phòng", "📋 Quản lý đặt phòng", "📈 Phân tích", "➕ Thêm đặt phòng", "💌 Mẫu tin nhắn", "👥 Khách mới HTML"] # Thêm tab mới
+tab_dashboard, tab_calendar, tab_booking_mgmt, tab_analytics, tab_add_booking, tab_message_templates, tab_customer_html = st.tabs(tab_titles) # Thêm biến tab mới
 
 # --- TAB DASHBOARD ---
 with tab_dashboard:
     st.header("📊 Tổng quan Dashboard")
     if df is not None and not df.empty and active_bookings is not None:
         st.markdown("#### Số liệu chính")
-        col1, col2, col3, col4 = st.columns(4)
+        # col1, col2, col3, col4 = st.columns(4) # Old 4-column layout
+        row1_cols = st.columns(3) # First row of 3 metrics
+        row2_cols = st.columns(3) # Second row of 3 metrics
+
         today_dt = datetime.date.today()
 
+        # Metric 1: Tổng số đặt phòng
         total_bookings_count = len(df)
         active_bookings_count = len(active_bookings) if active_bookings is not None else 0
-        with col1:
+        with row1_cols[0]:
             st.markdown(f"""<div class="metric-card" style="border-left-color: var(--primary-color);"><p style="font-size: 0.9rem; color: #666;">Tổng số đặt phòng</p><h3 style="color: var(--primary-color); margin-top: 0.5rem;">{total_bookings_count}</h3><p style="font-size: 0.8rem; color: var(--success-color);">{active_bookings_count} đang hoạt động</p></div>""", unsafe_allow_html=True)
 
+        # Metric 2: Tổng TT đã Check-in
         total_checked_in_revenue_dashboard = 0
-        if active_bookings is not None and 'Tổng thanh toán' in active_bookings.columns and not active_bookings.empty:
-            checked_in_df_dashboard = active_bookings[
-                (active_bookings['Check-in Date'].dt.date <= today_dt)
+        if 'Tổng thanh toán' in active_bookings.columns and not active_bookings.empty:
+            # Ensure Check-in Date is datetime before using .dt
+            active_bookings_for_revenue = active_bookings.copy()
+            active_bookings_for_revenue['Check-in Date'] = pd.to_datetime(active_bookings_for_revenue['Check-in Date'], errors='coerce')
+            
+            checked_in_df_dashboard = active_bookings_for_revenue[
+                (active_bookings_for_revenue['Check-in Date'].dt.date <= today_dt)
             ]
-            # Ensure all values are numeric for sum
-        checked_in_df_dashboard['Tổng thanh toán'] = pd.to_numeric(checked_in_df_dashboard['Tổng thanh toán'], errors='coerce').fillna(0)
-        total_checked_in_revenue_dashboard = checked_in_df_dashboard['Tổng thanh toán'].sum()
-
-        with col2:
+            checked_in_df_dashboard['Tổng thanh toán'] = pd.to_numeric(checked_in_df_dashboard['Tổng thanh toán'], errors='coerce').fillna(0)
+            total_checked_in_revenue_dashboard = checked_in_df_dashboard['Tổng thanh toán'].sum()
+        with row1_cols[1]:
             st.markdown(f"""<div class="metric-card" style="border-left-color: var(--success-color);"><p style="font-size: 0.9rem; color: #666;">Tổng TT đã Check-in (VND)</p><h3 style="color: var(--success-color); margin-top: 0.5rem;">{total_checked_in_revenue_dashboard:,.0f}</h3><p style="font-size: 0.8rem; color: #666;">Tính đến hôm nay</p></div>""", unsafe_allow_html=True)
 
-        if active_bookings is not None and 'Tổng thanh toán' in active_bookings.columns and not active_bookings.empty:
+        # Metric 3: Tổng TT dự kiến (Tất cả HĐ)
+        if 'Tổng thanh toán' in active_bookings.columns and not active_bookings.empty:
             active_bookings['Tổng thanh toán'] = pd.to_numeric(active_bookings['Tổng thanh toán'], errors='coerce').fillna(0)
             total_expected_revenue_all_active_dashboard = active_bookings['Tổng thanh toán'].sum()
         else:
             total_expected_revenue_all_active_dashboard = 0
-        with col3:
+        with row1_cols[2]:
             st.markdown(f"""<div class="metric-card" style="border-left-color: var(--secondary-color);"><p style="font-size: 0.9rem; color: #666;">Tổng TT dự kiến (Tất cả HĐ, VND)</p><h3 style="color: var(--secondary-color); margin-top: 0.5rem;">{total_expected_revenue_all_active_dashboard:,.0f}</h3><p style="font-size: 0.8rem; color: #666;">Từ các đặt phòng hoạt động</p></div>""", unsafe_allow_html=True)
 
-        if active_bookings is not None and not active_bookings.empty:
-            active_on_today_dashboard = active_bookings[(active_bookings['Check-in Date'].dt.date <= today_dt) & (active_bookings['Check-out Date'].dt.date > today_dt) & (active_bookings['Tình trạng'] != 'Đã hủy')]
+        # Metric 4: Tỷ lệ lấp đầy (Tổng)
+        if not active_bookings.empty:
+             # Ensure Check-in/out Dates are datetime before using .dt
+            active_bookings_for_occupancy = active_bookings.copy()
+            active_bookings_for_occupancy['Check-in Date'] = pd.to_datetime(active_bookings_for_occupancy['Check-in Date'], errors='coerce')
+            active_bookings_for_occupancy['Check-out Date'] = pd.to_datetime(active_bookings_for_occupancy['Check-out Date'], errors='coerce')
+
+            active_on_today_dashboard = active_bookings_for_occupancy[(
+                active_bookings_for_occupancy['Check-in Date'].dt.date <= today_dt) & 
+                (active_bookings_for_occupancy['Check-out Date'].dt.date > today_dt) & 
+                (active_bookings_for_occupancy['Tình trạng'] != 'Đã hủy')
+            ]
             occupied_today_count_dashboard_actual = len(active_on_today_dashboard)
         else: occupied_today_count_dashboard_actual = 0
         occupancy_rate_today_dashboard = (occupied_today_count_dashboard_actual / TOTAL_HOTEL_CAPACITY) * 100 if TOTAL_HOTEL_CAPACITY > 0 else 0
         denominator_display_dashboard = TOTAL_HOTEL_CAPACITY
-        with col4:
+        with row2_cols[0]: # Changed from col4 to row2_cols[0]
             st.markdown(f"""<div class="metric-card" style="border-left-color: var(--info-color);"><p style="font-size: 0.9rem; color: #666;">Tỷ lệ lấp đầy (Tổng)</p><h3 style="color: var(--info-color); margin-top: 0.5rem;">{occupancy_rate_today_dashboard:.1f}%</h3><p style="font-size: 0.8rem; color: #666;">{occupied_today_count_dashboard_actual}/{denominator_display_dashboard} phòng</p></div>""", unsafe_allow_html=True)
+
+        # --- New Metrics --- 
+        if not active_bookings.empty:
+            # Metric 5: Average Length of Stay (ALOS)
+            active_bookings_for_calc = active_bookings.copy()
+            active_bookings_for_calc['Stay Duration'] = pd.to_numeric(active_bookings_for_calc['Stay Duration'], errors='coerce').fillna(0)
+            alos = active_bookings_for_calc['Stay Duration'].mean() if not active_bookings_for_calc['Stay Duration'].empty else 0
+            with row2_cols[1]:
+                st.markdown(f"""<div class="metric-card" style="border-left-color: #6f42c1;"><p style="font-size: 0.9rem; color: #666;">TB Thời gian ở (ALOS)</p><h3 style="color: #6f42c1; margin-top: 0.5rem;">{alos:.1f} ngày</h3><p style="font-size: 0.8rem; color: #666;">Đặt phòng hoạt động</p></div>""", unsafe_allow_html=True)
+
+            # Metric 6: Average Daily Rate (ADR)
+            total_revenue_active = pd.to_numeric(active_bookings_for_calc['Tổng thanh toán'], errors='coerce').sum()
+            total_stay_duration_active = pd.to_numeric(active_bookings_for_calc['Stay Duration'], errors='coerce').sum()
+            adr = (total_revenue_active / total_stay_duration_active) if total_stay_duration_active > 0 else 0
+            with row2_cols[2]:
+                st.markdown(f"""<div class="metric-card" style="border-left-color: #fd7e14;"><p style="font-size: 0.9rem; color: #666;">TB Giá mỗi đêm (ADR)</p><h3 style="color: #fd7e14; margin-top: 0.5rem;">{adr:,.0f} VND</h3><p style="font-size: 0.8rem; color: #666;">Đặt phòng hoạt động</p></div>""", unsafe_allow_html=True)
+            
+            # Metric 7 (Example): Average Booking Lead Time (Optional, can add to a new row if needed)
+            # Ensure Booking Date and Check-in Date are datetime
+            active_bookings_for_calc['Booking Date'] = pd.to_datetime(active_bookings_for_calc['Booking Date'], errors='coerce')
+            active_bookings_for_calc['Check-in Date'] = pd.to_datetime(active_bookings_for_calc['Check-in Date'], errors='coerce')
+            
+            valid_lead_time_df = active_bookings_for_calc.dropna(subset=['Check-in Date', 'Booking Date'])
+            if not valid_lead_time_df.empty:
+                lead_time_days = (valid_lead_time_df['Check-in Date'] - valid_lead_time_df['Booking Date']).dt.days
+                avg_lead_time = lead_time_days[lead_time_days >= 0].mean() # Only consider non-negative lead times
+            else: 
+                avg_lead_time = 0
+            
+            # If adding a third row for metrics:
+            # row3_cols = st.columns(3)
+            # with row3_cols[0]:
+            #     st.markdown(f"""<div class="metric-card" style="border-left-color: #20c997;"><p style="font-size: 0.9rem; color: #666;">TB Thời gian đặt trước</p><h3 style="color: #20c997; margin-top: 0.5rem;">{avg_lead_time:.1f} ngày</h3><p style="font-size: 0.8rem; color: #666;">Đặt phòng hoạt động</p></div>""", unsafe_allow_html=True)
+
+        else: # Handle case where active_bookings might be empty for new metrics
+            with row2_cols[1]:
+                 st.markdown(f"""<div class="metric-card" style="border-left-color: #6f42c1;"><p style="font-size: 0.9rem; color: #666;">TB Thời gian ở (ALOS)</p><h3 style="color: #6f42c1; margin-top: 0.5rem;">N/A</h3><p style="font-size: 0.8rem; color: #666;">Không có dữ liệu</p></div>""", unsafe_allow_html=True)
+            with row2_cols[2]:
+                 st.markdown(f"""<div class="metric-card" style="border-left-color: #fd7e14;"><p style="font-size: 0.9rem; color: #666;">TB Giá mỗi đêm (ADR)</p><h3 style="color: #fd7e14; margin-top: 0.5rem;">N/A</h3><p style="font-size: 0.8rem; color: #666;">Không có dữ liệu</p></div>""", unsafe_allow_html=True)
+
 
         st.markdown("---"); st.markdown("#### Biểu đồ tổng quan")
         col_chart1, col_chart2 = st.columns(2)
@@ -920,47 +1155,33 @@ with tab_calendar:
                         elif day_info_cal['status_indicator_type'] == "red_x": status_indicator_html = "<div class='dot-indicator dot-red'>✕</div>"
                         day_class = "day-cell"
                         if current_day_date_cal == datetime.date.today(): day_class += " day-today"
-                        if st.session_state.selected_calendar_date == current_day_date_cal: day_class += " day-selected"
+                        # if st.session_state.selected_calendar_date == current_day_date_cal: day_class += " day-selected" # No longer need a persistent selected state for the background style this way
+                        
+                        # Check if this is the date for which a dialog was requested
+                        if st.session_state.get('show_modal_for_date') == current_day_date_cal:
+                            day_class += " day-selected" # Style the day that triggered the modal
+
                         st.markdown(f"""<div class='{day_class}'><div class='day-number'>{day_num_cal}</div>{status_indicator_html}<div class='day-status'>{day_info_cal['status_text']}</div></div>""", unsafe_allow_html=True)
                         button_key_calendar = f"day_button_overlay_{current_day_date_cal.strftime('%Y%m%d')}"
+                        
                         if st.button("", key=button_key_calendar, help=f"Xem chi tiết ngày {current_day_date_cal.strftime('%d/%m/%Y')}"):
-                            st.session_state.selected_calendar_date = None if st.session_state.selected_calendar_date == current_day_date_cal else current_day_date_cal
-                            st.rerun()
+                            # st.session_state.selected_calendar_date = None if st.session_state.selected_calendar_date == current_day_date_cal else current_day_date_cal
+                            # st.rerun() # Old way with expander
+                            st.session_state.show_modal_for_date = current_day_date_cal # Flag to identify which date's modal to show
+                            # The dialog will be called after the main script runs if this flag is set
+                            # No immediate rerun needed here, dialog call handles its own lifecycle. 
+                            # However, to make sure the main script re-runs to check the flag and open the dialog:
+                            st.rerun() 
     else: st.info("Không có dữ liệu đặt phòng để hiển thị lịch.")
 
-    if st.session_state.selected_calendar_date is not None:
-        selected_date_cal = st.session_state.selected_calendar_date
-        st.markdown("---")
-        with st.expander(f"🗓️ Chi tiết hoạt động ngày: {selected_date_cal.strftime('%A, %d/%m/%Y')}", expanded=True):
-            daily_activity_cal = get_daily_activity(selected_date_cal, active_bookings)
-            col_checkin_cal, col_checkout_cal, col_occupied_cal = st.columns(3)
-            with col_checkin_cal:
-                st.markdown("##### 🛬 Khách Check-in")
-                if daily_activity_cal['check_in']:
-                    st.success(f"**{len(daily_activity_cal['check_in'])}** lượt check-in:")
-                    for guest in daily_activity_cal['check_in']: st.markdown(f"- **{guest.get('name','N/A')}** ({guest.get('room_type','N/A')})"); st.caption(f"  Mã ĐP: {guest.get('booking_id','N/A')}")
-                else: st.info("Không có khách check-in.")
-            with col_checkout_cal:
-                st.markdown("##### 🛫 Khách Check-out")
-                if daily_activity_cal['check_out']:
-                    st.warning(f"**{len(daily_activity_cal['check_out'])}** lượt check-out:")
-                    for guest in daily_activity_cal['check_out']: st.markdown(f"- **{guest.get('name','N/A')}** ({guest.get('room_type','N/A')})"); st.caption(f"  Mã ĐP: {guest.get('booking_id','N/A')}")
-                else: st.info("Không có khách check-out.")
-            with col_occupied_cal:
-                st.markdown("##### 🏨 Khách đang ở")
-                if daily_activity_cal['occupied']:
-                    st.info(f"**{len(daily_activity_cal['occupied'])}** lượt khách ở:")
-                    for guest in daily_activity_cal['occupied']:
-                        check_in_str = guest['check_in'].strftime('%d/%m') if guest['check_in'] else 'N/A'
-                        check_out_str = guest['check_out'].strftime('%d/%m') if guest['check_out'] else 'N/A'
-                        total_payment_val = guest.get('total_payment', 0.0)
-                        total_payment_str = f"{total_payment_val:,.0f}" if pd.notna(total_payment_val) and total_payment_val != 0.0 else "0"
-                        st.markdown(f"- **{guest.get('name','N/A')}** ({guest.get('room_type','N/A')})")
-                        st.caption(f"  Từ {check_in_str} đến {check_out_str} (Mã ĐP: {guest.get('booking_id','N/A')}) - Tổng tiền: {total_payment_str}")
-                        st.markdown("<div class='guest-separator'></div>", unsafe_allow_html=True)
-                else: st.info("Không có khách đang ở.")
-            if st.button("Ẩn chi tiết ngày", key="hide_day_details_calendar", type="primary"):
-                st.session_state.selected_calendar_date = None; st.rerun()
+    # Check if a modal needs to be shown after the main part of the script has run
+    if 'show_modal_for_date' in st.session_state and st.session_state.show_modal_for_date is not None:
+        date_for_modal = st.session_state.show_modal_for_date
+        st.session_state.show_modal_for_date = None # Reset the flag immediately to prevent re-opening on next rerun after close
+        show_day_details_modal(date_for_modal) 
+    
+    # Remove the old expander logic if it was here.
+    # if st.session_state.selected_calendar_date is not None: ... (old expander code was here)
 
 # --- TAB QUẢN LÝ ĐẶT PHÒNG ---
 with tab_booking_mgmt:
@@ -1642,11 +1863,17 @@ with tab_message_templates:
                 st.session_state.message_templates_dict = parsed_templates
                 st.session_state.raw_template_content_for_download = format_templates_to_text(st.session_state.message_templates_dict)
                 st.sidebar.success("Đã tải và phân tích thành công file mẫu tin nhắn!")
-                st.rerun()
+                # st.rerun() # Removed explicit rerun to see if it resolves constant refresh
             else:
                 st.sidebar.error("Lỗi khi phân tích file mẫu tin nhắn. Nội dung có thể không hợp lệ.")
         except Exception as e:
             st.sidebar.error(f"Lỗi khi xử lý file: {e}")
+
+    if st.sidebar.button("🔄 Khôi phục mẫu tin nhắn mặc định", key="reset_default_templates_button"):
+        st.session_state.message_templates_dict = parse_message_templates(DEFAULT_MESSAGE_TEMPLATE_CONTENT)
+        st.session_state.raw_template_content_for_download = format_templates_to_text(st.session_state.message_templates_dict)
+        st.sidebar.success("Đã khôi phục các mẫu tin nhắn về mặc định!")
+        st.rerun() # Rerun to reflect the changes immediately
 
     st.markdown("---")
     st.subheader("Thêm Mẫu Tin Nhắn Mới")
@@ -1742,7 +1969,17 @@ def upload_to_gsheet(df, sheet_id, creds_path, worksheet_name=None):
         'https://www.googleapis.com/auth/spreadsheets',
         'https://www.googleapis.com/auth/drive',
     ]
-    creds = Credentials.from_service_account_file(creds_path, scopes=scope)
+    # MODIFICATION START: Load credentials from Streamlit secrets if available
+    if "GCP_SERVICE_ACCOUNT_JSON" in st.secrets:
+        creds_json_str = st.secrets["GCP_SERVICE_ACCOUNT_JSON"]
+        creds_info = json.loads(creds_json_str)
+        creds = Credentials.from_service_account_info(creds_info, scopes=scope)
+    elif creds_path and os.path.exists(creds_path): # Fallback to local file if secret not found
+        creds = Credentials.from_service_account_file(creds_path, scopes=scope)
+    else:
+        st.error("Google Sheets credentials not found for upload. Please set GCP_SERVICE_ACCOUNT_JSON secret in Streamlit Cloud or ensure local creds_path is valid.")
+        raise Exception("Credentials not found for upload_to_gsheet")
+    # MODIFICATION END
     gc = gspread.authorize(creds)
     sh = gc.open_by_key(sheet_id)
     if worksheet_name:
@@ -1766,18 +2003,58 @@ if st.session_state.get('df') is not None and not st.session_state['df'].empty:
     default_sheet_id = "13kQETOUGCVUwUqZrxeLy-WAj3b17SugI4L8Oq09SX2w"
     sheet_id = st.sidebar.text_input("Google Sheet ID", value=default_sheet_id, key="gsheet_id")
     worksheet_name = st.sidebar.text_input("Tên Worksheet (mặc định: BookingManager)", value="BookingManager", key="gsheet_worksheet_name")
-    creds_path = "streamlit-api-461302-5dfbcb4beaba.json"
+    
+    # --- Robust Credential Path Logic (Copied and adapted) ---
+    creds_path_sidebar = "streamlit-api-461302-5dfbcb4beaba.json" # Default
+    try:
+        import os
+        import json # Add json import for parsing secrets
+        creds_filename_sidebar = "streamlit-api-461302-5dfbcb4beaba.json"
+        creds_path_sidebar = creds_filename_sidebar # Initial assumption
 
-    def import_from_gsheet(sheet_id, creds_path, worksheet_name=None):
+        try:
+            script_dir_sidebar = os.path.dirname(__file__)
+            path_in_script_dir_sidebar = os.path.join(script_dir_sidebar, creds_filename_sidebar)
+            if os.path.exists(path_in_script_dir_sidebar):
+                creds_path_sidebar = path_in_script_dir_sidebar
+                # st.sidebar.caption(f"Found GSheet creds in script_dir: {creds_path_sidebar}") # Optional: for debugging
+        except NameError:
+            pass # __file__ not defined, cannot check script dir
+
+        if not os.path.exists(creds_path_sidebar):
+            cwd_sidebar = os.getcwd()
+            path_in_cwd_sidebar = os.path.join(cwd_sidebar, creds_filename_sidebar)
+            if os.path.exists(path_in_cwd_sidebar):
+                creds_path_sidebar = path_in_cwd_sidebar
+                # st.sidebar.caption(f"Found GSheet creds in CWD: {creds_path_sidebar}") # Optional: for debugging
+            # else: # No explicit warning here to keep sidebar cleaner, error will show on action
+                # st.sidebar.caption(f"GSheet creds not found, will use: {creds_path_sidebar}") 
+    except ImportError:
+        st.sidebar.warning("OS module not available for robust GSheet creds path finding.")
+    except Exception:
+        st.sidebar.warning("Error finding GSheet creds path, using default.")
+    # --- End of Robust Credential Path Logic ---
+
+    def import_from_gsheet(sheet_id_func, creds_path_func, worksheet_name_func=None):
         scope = [
             'https://www.googleapis.com/auth/spreadsheets',
             'https://www.googleapis.com/auth/drive',
         ]
-        creds = Credentials.from_service_account_file(creds_path, scopes=scope)
-        gc = gspread.authorize(creds)
-        sh = gc.open_by_key(sheet_id)
-        if worksheet_name:
-            worksheet = sh.worksheet(worksheet_name)
+        # MODIFICATION START: Load credentials from Streamlit secrets if available
+        if "GCP_SERVICE_ACCOUNT_JSON" in st.secrets:
+            creds_json_str = st.secrets["GCP_SERVICE_ACCOUNT_JSON"]
+            creds_info = json.loads(creds_json_str)
+            creds_func = Credentials.from_service_account_info(creds_info, scopes=scope)
+        elif creds_path_func and os.path.exists(creds_path_func): # Fallback to local file
+            creds_func = Credentials.from_service_account_file(creds_path_func, scopes=scope)
+        else:
+            st.error("Google Sheets credentials not found for import. Please set GCP_SERVICE_ACCOUNT_JSON secret in Streamlit Cloud or ensure local creds_path_func is valid.")
+            return pd.DataFrame() # Return empty DataFrame on credential error
+        # MODIFICATION END
+        gc = gspread.authorize(creds_func)
+        sh = gc.open_by_key(sheet_id_func)
+        if worksheet_name_func:
+            worksheet = sh.worksheet(worksheet_name_func)
         else:
             worksheet = sh.sheet1
         data = worksheet.get_all_values()
@@ -1791,7 +2068,17 @@ if st.session_state.get('df') is not None and not st.session_state['df'].empty:
             'https://www.googleapis.com/auth/spreadsheets',
             'https://www.googleapis.com/auth/drive',
         ]
-        creds = Credentials.from_service_account_file(creds_path, scopes=scope)
+        # MODIFICATION START: Load credentials from Streamlit secrets if available
+        if "GCP_SERVICE_ACCOUNT_JSON" in st.secrets:
+            creds_json_str = st.secrets["GCP_SERVICE_ACCOUNT_JSON"]
+            creds_info = json.loads(creds_json_str)
+            creds = Credentials.from_service_account_info(creds_info, scopes=scope)
+        elif creds_path and os.path.exists(creds_path): # Fallback to local file
+            creds = Credentials.from_service_account_file(creds_path, scopes=scope)
+        else:
+            st.error("Google Sheets credentials not found for append. Please set GCP_SERVICE_ACCOUNT_JSON secret in Streamlit Cloud or ensure local creds_path is valid.")
+            raise Exception("Credentials not found for append_guest_to_gsheet")
+        # MODIFICATION END
         gc = gspread.authorize(creds)
         sh = gc.open_by_key(sheet_id)
         if worksheet_name:
@@ -1805,8 +2092,10 @@ if st.session_state.get('df') is not None and not st.session_state['df'].empty:
 
     if st.sidebar.button("⬆️ Upload lên Google Sheets", key="upload_gsheet_btn"):
         try:
-            url = upload_to_gsheet(st.session_state['df'], sheet_id, creds_path, worksheet_name)
+            url = upload_to_gsheet(st.session_state['df'], sheet_id, creds_path_sidebar, worksheet_name)
             st.sidebar.success(f"Đã upload thành công! [Mở Google Sheet]({url})")
+        except FileNotFoundError:
+            st.sidebar.error(f"Lỗi: File credentials Google Sheets ('{creds_path_sidebar}') không tìm thấy. Vui lòng kiểm tra lại đường dẫn.")
         except Exception as e:
             st.sidebar.error(f"Lỗi upload: {e}")
 
@@ -1814,16 +2103,18 @@ if st.session_state.get('df') is not None and not st.session_state['df'].empty:
         try:
             if st.session_state['df'] is not None and not st.session_state['df'].empty:
                 last_row = st.session_state['df'].iloc[-1]
-                url = append_guest_to_gsheet(last_row, sheet_id, creds_path, worksheet_name)
+                url = append_guest_to_gsheet(last_row, sheet_id, creds_path_sidebar, worksheet_name)
                 st.sidebar.success(f"Đã thêm khách cuối vào Google Sheet! [Mở Google Sheet]({url})")
             else:
                 st.sidebar.warning("Không có dữ liệu khách để thêm.")
+        except FileNotFoundError:
+            st.sidebar.error(f"Lỗi: File credentials Google Sheets ('{creds_path_sidebar}') không tìm thấy. Vui lòng kiểm tra lại đường dẫn.")
         except Exception as e:
             st.sidebar.error(f"Lỗi khi thêm khách: {e}")
 
     if st.sidebar.button("⬇️ Tải dữ liệu từ Google Sheets", key="import_gsheet_btn"):
         try:
-            df_imported = import_from_gsheet(sheet_id, creds_path, worksheet_name)
+            df_imported = import_from_gsheet(sheet_id, creds_path_sidebar, worksheet_name)
             if not df_imported.empty:
                 # Attempt to convert date columns to datetime
                 for col in ['Check-in Date', 'Check-out Date', 'Booking Date']:
@@ -1965,3 +2256,241 @@ if df_main_export_final is not None and not df_main_export_final.empty:
 
 else:
     st.sidebar.info("Chưa có dữ liệu để xuất.")
+
+# --- HÀM HỖ TRỢ CHO TAB KHÁCH MỚI HTML ---
+@st.cache_data
+def parse_customer_html(uploaded_html_file) -> Optional[pd.DataFrame]:
+    """
+    Phân tích file HTML để trích xuất dữ liệu khách hàng từ bảng.
+    Hàm này tìm kiếm bảng có class 'cdd0659f86' hoặc bảng đầu tiên nếu không tìm thấy.
+    """
+    if not BS4_AVAILABLE:
+        st.error("Thư viện BeautifulSoup4 không có sẵn. Không thể xử lý file HTML.")
+        return None
+    try:
+        st.info(f"Đang xử lý file HTML khách hàng: {uploaded_html_file.name}...")
+        soup = BeautifulSoup(uploaded_html_file.read(), 'html.parser')
+        
+        # Thử tìm bảng chính dựa trên class (ví dụ từ file gốc)
+        table = soup.find('table', class_='cdd0659f86') # Điều chỉnh class nếu cần
+        if not table:
+            st.warning("Không tìm thấy bảng với class 'cdd0659f86'. Đang thử tìm thẻ <table> đầu tiên...")
+            table = soup.find('table')
+            if not table:
+                st.error("Không tìm thấy thẻ <table> nào trong file HTML.")
+                return None
+        
+        parsed_rows_html = []
+        headers_from_html = []
+        
+        header_row = table.find('thead')
+        if header_row:
+            header_row_tr = header_row.find('tr')
+            if header_row_tr: headers_from_html = [th.get_text(strip=True) for th in header_row_tr.find_all('th')]
+        
+        body = table.find('tbody')
+        if not body:
+            # Nếu không có tbody, thử tìm tr trực tiếp trong table (một số HTML có thể không có tbody)
+            st.warning("Không tìm thấy <tbody>, đang thử tìm <tr> trực tiếp trong <table>.")
+            rows_in_table = table.find_all('tr')
+            if not headers_from_html and rows_in_table: #Nếu không có thead, lấy hàng đầu tiên làm header
+                 first_row_cells = rows_in_table[0].find_all(['th', 'td'])
+                 headers_from_html = [cell.get_text(strip=True) for cell in first_row_cells]
+                 body_rows_start_index = 1 # Bỏ qua hàng header
+            else:
+                 body_rows_start_index = 0 # Nếu có thead, xử lý tất cả tr trong table là body
+
+            for row_idx, row in enumerate(rows_in_table[body_rows_start_index:]):
+                cells = row.find_all(['td', 'th'])
+                row_data = {}
+                for i, cell in enumerate(cells):
+                    heading = cell.get('data-heading') # Một số bảng dùng data-heading
+                    if not heading and i < len(headers_from_html): heading = headers_from_html[i]
+                    elif not heading: heading = f"Cột {i+1}"
+                    
+                    # Enhanced logic for this path
+                    text_content = cell.get_text(separator=" ", strip=True)
+                    guest_name_headers = ["tên khách", "họ và tên", "guest name", "customer name", "tên người đặt"]
+                    is_guest_name_col = any(h.lower() in heading.lower() for h in guest_name_headers)
+
+                    if is_guest_name_col:
+                        link_tag = cell.find('a')
+                        name_text = link_tag.get_text(strip=True) if link_tag else text_content
+                        if "genius" in name_text.lower():
+                            row_data["Thành viên Genius"] = "Có"
+                            name_text = re.sub(r'(?i)genius', '', name_text).strip()
+                        else:
+                            genius_svg = cell.find('svg', alt=lambda x: x and 'genius' in x.lower())
+                            row_data["Thành viên Genius"] = "Có" if genius_svg else "Không"
+                        name_text = re.sub(r'(?i)(1 khách|2 khách|2 người lớn|\d+ adults?)', '', name_text).strip()
+                        row_data["Tên người đặt"] = name_text
+                        if heading not in row_data : row_data[heading] = text_content
+                    elif "thành viên genius" in heading.lower() or "genius member" in heading.lower():
+                        row_data["Thành viên Genius"] = "Có" if "có" in text_content.lower() or "yes" in text_content.lower() else "Không"
+                    else:
+                        row_data[heading] = text_content
+                if row_data: parsed_rows_html.append(row_data)
+
+        else: # Nếu có tbody
+            for row_idx, row in enumerate(body.find_all('tr')):
+                cells = row.find_all(['td', 'th'])
+                row_data = {}
+                for i, cell in enumerate(cells):
+                    heading = cell.get('data-heading')
+                    if not heading and i < len(headers_from_html): heading = headers_from_html[i]
+                    elif not heading: heading = f"Cột {i+1}"
+                    
+                    # Enhanced logic for the tbody path
+                    text_content = cell.get_text(separator=" ", strip=True)
+                    guest_name_headers = ["tên khách", "họ và tên", "guest name", "customer name", "tên người đặt"]
+                    is_guest_name_col = any(h.lower() in heading.lower() for h in guest_name_headers)
+
+                    if is_guest_name_col:
+                        link_tag = cell.find('a')
+                        name_text = link_tag.get_text(strip=True) if link_tag else text_content
+                        if "genius" in name_text.lower():
+                            row_data["Thành viên Genius"] = "Có"
+                            name_text = re.sub(r'(?i)genius', '', name_text).strip()
+                        else:
+                            genius_svg = cell.find('svg', alt=lambda x: x and 'genius' in x.lower())
+                            row_data["Thành viên Genius"] = "Có" if genius_svg else "Không"
+                        name_text = re.sub(r'(?i)(1 khách|2 khách|2 người lớn|\d+ adults?)', '', name_text).strip()
+                        row_data["Tên người đặt"] = name_text
+                        if heading not in row_data : row_data[heading] = text_content
+                    elif "thành viên genius" in heading.lower() or "genius member" in heading.lower():
+                        row_data["Thành viên Genius"] = "Có" if "có" in text_content.lower() or "yes" in text_content.lower() else "Không"
+                    else:
+                        row_data[heading] = text_content
+                if row_data: parsed_rows_html.append(row_data)
+
+        if not parsed_rows_html:
+            st.error("Không trích xuất được dòng dữ liệu nào từ bảng HTML.")
+            return None
+            
+        df_loaded_html_customer = pd.DataFrame(parsed_rows_html)
+        st.success(f"Đã xử lý thành công file HTML khách hàng: {uploaded_html_file.name}. Tìm thấy {len(df_loaded_html_customer)} dòng.")
+        return df_loaded_html_customer
+
+    except Exception as e:
+        st.error(f"Lỗi khi xử lý file HTML khách hàng {uploaded_html_file.name}: {e}")
+        import traceback
+        st.error(f"Chi tiết lỗi: {traceback.format_exc()}")
+        return None
+
+# --- TAB KHÁCH MỚI HTML ---
+with tab_customer_html:
+    st.header("👥 Quản lý Khách mới từ HTML")
+    
+    uploaded_customer_html_file = st.file_uploader("Tải lên file HTML chứa danh sách khách hàng mới", type=['html', 'htm'], key="customer_html_uploader")
+
+    if uploaded_customer_html_file is not None:
+        df_customer_html = parse_customer_html(uploaded_customer_html_file)
+        if df_customer_html is not None and not df_customer_html.empty:
+            st.session_state.customer_html_data = df_customer_html
+        else:
+            st.session_state.customer_html_data = None # Xóa dữ liệu cũ nếu file mới không hợp lệ
+
+    if st.session_state.customer_html_data is not None and not st.session_state.customer_html_data.empty:
+        st.subheader("Danh sách khách hàng từ HTML")
+        st.dataframe(st.session_state.customer_html_data, use_container_width=True)
+        
+        # Thêm các nút hoặc chức năng quản lý ở đây nếu cần
+        st.markdown("---")
+        st.subheader("Chức năng quản lý (ví dụ)")
+
+        if st.button("➕ Gộp khách mới vào DS đặt phòng chính", key="merge_new_customers_to_main_bookings"):
+            if st.session_state.customer_html_data is not None and not st.session_state.customer_html_data.empty:
+                if 'Tên người đặt' not in st.session_state.customer_html_data.columns:
+                    st.error("Lỗi: File HTML được tải lên không có cột 'Tên người đặt' rõ ràng. Vui lòng kiểm tra cấu trúc file HTML.")
+                else:
+                    main_df = st.session_state.get('df', pd.DataFrame(columns=ALL_REQUIRED_COLS))
+                    if main_df is None or main_df.empty:
+                         main_df = pd.DataFrame(columns=ALL_REQUIRED_COLS)
+                    
+                    existing_guest_names = set()
+                    if 'Tên người đặt' in main_df.columns:
+                        existing_guest_names = set(main_df['Tên người đặt'].astype(str).str.strip().str.title().dropna().unique())
+                    
+                    new_customers_appended_count = 0
+                    duplicates_skipped_count = 0
+                    new_records_list = []
+
+                    default_room_type_add = room_types[0] if room_types else "N/A (Không có loại phòng)"
+                    default_location_add = "N/A (Từ HTML)"
+                    if main_df is not None and not main_df.empty and 'Tên chỗ nghỉ' in main_df.columns and 'Vị trí' in main_df.columns and default_room_type_add != "N/A (Không có loại phòng)":
+                        room_specific_locs = main_df[main_df['Tên chỗ nghỉ'] == default_room_type_add]
+                        if not room_specific_locs.empty:
+                            unique_locs = room_specific_locs['Vị trí'].dropna().unique()
+                            if len(unique_locs) > 0: default_location_add = str(unique_locs[0])
+
+                    for index, new_customer_row in st.session_state.customer_html_data.iterrows():
+                        html_guest_name = new_customer_row.get('Tên người đặt')
+                        if pd.isna(html_guest_name) or str(html_guest_name).strip() == "":
+                            st.warning(f"Bỏ qua dòng {index+1} từ HTML do thiếu tên khách.")
+                            continue
+                        
+                        normalized_html_guest_name = str(html_guest_name).strip().title()
+
+                        if normalized_html_guest_name not in existing_guest_names:
+                            new_booking_id = f"HTML{datetime.datetime.now().strftime('%y%m%d%H%M%S')}{index:02d}"
+                            genius_status_html = new_customer_row.get('Thành viên Genius', "Không") 
+                            if pd.isna(genius_status_html): genius_status_html = "Không"
+
+                            record = {
+                                'Tên chỗ nghỉ': default_room_type_add,
+                                'Vị trí': default_location_add,
+                                'Tên người đặt': normalized_html_guest_name,
+                                'Thành viên Genius': genius_status_html,
+                                'Ngày đến': f"ngày {datetime.date.today().day} tháng {datetime.date.today().month} năm {datetime.date.today().year}", # Placeholder
+                                'Ngày đi': f"ngày {(datetime.date.today() + timedelta(days=1)).day} tháng {(datetime.date.today() + timedelta(days=1)).month} năm {(datetime.date.today() + timedelta(days=1)).year}", # Placeholder
+                                'Được đặt vào': f"ngày {datetime.date.today().day} tháng {datetime.date.today().month} năm {datetime.date.today().year}",
+                                'Tình trạng': "OK (Mới từ HTML)",
+                                'Tổng thanh toán': 0.0,
+                                'Hoa hồng': 0.0,
+                                'Tiền tệ': "VND",
+                                'Số đặt phòng': new_booking_id,
+                                'Check-in Date': pd.Timestamp(datetime.date.today()), # Placeholder
+                                'Check-out Date': pd.Timestamp(datetime.date.today() + timedelta(days=1)), # Placeholder
+                                'Booking Date': pd.Timestamp(datetime.date.today()),
+                                'Stay Duration': 1, # Placeholder
+                                'Giá mỗi đêm': 0.0
+                            }
+                            # Ensure all required columns are present
+                            for req_col in ALL_REQUIRED_COLS:
+                                if req_col not in record:
+                                    if "Date" in req_col: record[req_col] = pd.NaT
+                                    elif "Duration" in req_col: record[req_col] = 0
+                                    elif req_col in ['Tổng thanh toán', 'Hoa hồng', 'Giá mỗi đêm']: record[req_col] = 0.0
+                                    else: record[req_col] = "N/A"
+                            
+                            new_records_list.append(record)
+                            existing_guest_names.add(normalized_html_guest_name) # Add to set to prevent adding same new customer multiple times if they appear >1 in HTML
+                            new_customers_appended_count += 1
+                        else:
+                            duplicates_skipped_count += 1
+                    
+                    if new_records_list:
+                        new_bookings_df = pd.DataFrame(new_records_list)
+                        st.session_state.df = pd.concat([main_df, new_bookings_df], ignore_index=True)
+                        st.session_state.active_bookings = st.session_state.df[st.session_state.df['Tình trạng'] != 'Đã hủy'].copy()
+                        st.session_state.room_types = get_cleaned_room_types(st.session_state.df)
+                        st.session_state.last_action_message = f"Đã gộp thành công! Thêm {new_customers_appended_count} khách mới. Bỏ qua {duplicates_skipped_count} khách trùng tên."
+                        st.success(st.session_state.last_action_message)
+                         # Optionally clear HTML data after merge
+                        # st.session_state.customer_html_data = None 
+                        st.rerun()
+                    elif duplicates_skipped_count > 0:
+                        st.info(f"Không có khách hàng mới nào được thêm. {duplicates_skipped_count} khách hàng được tìm thấy đã tồn tại trong danh sách chính.")
+                    else:
+                        st.info("Không có khách hàng mới nào trong file HTML để thêm hoặc tất cả đều trùng tên.")
+            else:
+                st.warning("Không có dữ liệu khách hàng từ HTML để gộp. Vui lòng tải file trước.")
+
+        if st.button("Xóa dữ liệu khách đã tải", key="clear_customer_html_data"):
+            st.session_state.customer_html_data = None
+            st.rerun()
+
+    elif uploaded_customer_html_file is None:
+        st.info("Vui lòng tải lên file HTML để xem và quản lý khách hàng.")
+    else: # uploaded_customer_html_file is not None but processing failed
+        st.warning("Không thể hiển thị dữ liệu khách hàng do lỗi xử lý file HTML hoặc file không chứa dữ liệu hợp lệ.")
