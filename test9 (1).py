@@ -1972,6 +1972,7 @@ def upload_to_gsheet(df, sheet_id, creds_path, worksheet_name=None):
     # MODIFICATION START: Load credentials from Streamlit secrets if available
     if "GCP_SERVICE_ACCOUNT_JSON" in st.secrets:
         creds_json_str = st.secrets["GCP_SERVICE_ACCOUNT_JSON"]
+        st.error(f"DEBUG (upload_to_gsheet): GCP_SERVICE_ACCOUNT_JSON is {len(creds_json_str)} chars long.") # DEBUG LINE
         creds_info = json.loads(creds_json_str)
         creds = Credentials.from_service_account_info(creds_info, scopes=scope)
     elif creds_path and os.path.exists(creds_path): # Fallback to local file if secret not found
@@ -2071,6 +2072,7 @@ if st.session_state.get('df') is not None and not st.session_state['df'].empty:
         # MODIFICATION START: Load credentials from Streamlit secrets if available
         if "GCP_SERVICE_ACCOUNT_JSON" in st.secrets:
             creds_json_str = st.secrets["GCP_SERVICE_ACCOUNT_JSON"]
+            st.error(f"DEBUG (append_guest_to_gsheet): GCP_SERVICE_ACCOUNT_JSON is {len(creds_json_str)} chars long.") # DEBUG LINE
             creds_info = json.loads(creds_json_str)
             creds = Credentials.from_service_account_info(creds_info, scopes=scope)
         elif creds_path and os.path.exists(creds_path): # Fallback to local file
