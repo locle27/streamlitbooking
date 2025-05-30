@@ -1458,132 +1458,145 @@ with tab_booking_mgmt:
     else:
         st.info("Vui lòng tải file dữ liệu để quản lý đặt phòng.")
 
-    if 'editing_booking_id_for_dialog' in st.session_state and st.session_state.editing_booking_id_for_dialog:
-        booking_id_to_edit = st.session_state.editing_booking_id_for_dialog
+    # --- Handle Edit Booking Dialog ---
+    _booking_id_to_edit_trigger = st.session_state.get('editing_booking_id_for_dialog')
+
+    if _booking_id_to_edit_trigger:
+        # Consume the trigger immediately
+        st.session_state.editing_booking_id_for_dialog = None 
+        
+        booking_id_to_edit = _booking_id_to_edit_trigger # Use the stored value
 
         current_main_df = st.session_state.get('df', pd.DataFrame())
+        booking_to_edit_series = None
         if not current_main_df.empty and 'Số đặt phòng' in current_main_df.columns:
             booking_to_edit_series_list = current_main_df[current_main_df['Số đặt phòng'] == booking_id_to_edit]
             if not booking_to_edit_series_list.empty:
                 booking_to_edit_series = booking_to_edit_series_list.iloc[0]
 
-                @st.dialog("Chỉnh sửa Ngày Check-in/Check-out")
-                def edit_booking_dates_dialog_content(booking_data_series, booking_id):
-                    st.write(f"Chỉnh sửa đặt phòng: **{booking_id}**")
-                    st.write(f"Khách: {booking_data_series['Tên người đặt']}")
-                    st.write(f"Loại phòng: {booking_data_series['Tên chỗ nghỉ']}")
-                    st.caption("Lưu ý: Thay đổi ngày check-in có thể tự động điều chỉnh ngày check-out nếu ngày check-out hiện tại không còn hợp lệ. Vui lòng kiểm tra kỹ cả hai ngày trước khi lưu.")
+        if booking_to_edit_series is not None:
+            @st.dialog("Chỉnh sửa Ngày Check-in/Check-out")
+            def edit_booking_dates_dialog_content(booking_data_series, booking_id):
+                st.write(f"Chỉnh sửa đặt phòng: **{booking_id}**")
+                st.write(f"Khách: {booking_data_series['Tên người đặt']}")
+                st.write(f"Loại phòng: {booking_data_series['Tên chỗ nghỉ']}")
+                st.caption("Lưu ý: Thay đổi ngày check-in có thể tự động điều chỉnh ngày check-out nếu ngày check-out hiện tại không còn hợp lệ. Vui lòng kiểm tra kỹ cả hai ngày trước khi lưu.")
 
-                    current_check_in_dt = booking_data_series['Check-in Date'].date()
-                    current_check_out_dt = booking_data_series['Check-out Date'].date()
-                    
-                    dialog_cin_key = f"dialog_cin_{booking_id}"
-                    dialog_cout_key = f"dialog_cout_{booking_id}"
+                current_check_in_dt = booking_data_series['Check-in Date'].date()
+                current_check_out_dt = booking_data_series['Check-out Date'].date()
+                
+                dialog_cin_key = f"dialog_cin_{booking_id}"
+                dialog_cout_key = f"dialog_cout_{booking_id}"
 
-                    if dialog_cin_key not in st.session_state:
-                        st.session_state[dialog_cin_key] = current_check_in_dt
-                    if dialog_cout_key not in st.session_state:
-                        st.session_state[dialog_cout_key] = current_check_out_dt
+                if dialog_cin_key not in st.session_state:
+                    st.session_state[dialog_cin_key] = current_check_in_dt
+                if dialog_cout_key not in st.session_state:
+                    st.session_state[dialog_cout_key] = current_check_out_dt
 
-                    new_check_in = st.date_input(
-                        "Ngày check-in mới:",
-                        value=st.session_state[dialog_cin_key],
-                        min_value=datetime.date.today() - timedelta(days=365*2),
-                        max_value=datetime.date.today() + timedelta(days=365*2),
-                        key=dialog_cin_key 
-                    )
+                new_check_in = st.date_input(
+                    "Ngày check-in mới:",
+                    value=st.session_state[dialog_cin_key],
+                    min_value=datetime.date.today() - timedelta(days=365*2),
+                    max_value=datetime.date.today() + timedelta(days=365*2),
+                    key=dialog_cin_key 
+                )
+                
+                min_checkout_dialog = st.session_state[dialog_cin_key] + timedelta(days=1)
+                
+                current_dialog_checkout_val = st.session_state[dialog_cout_key]
+                if current_dialog_checkout_val < min_checkout_dialog:
+                    st.session_state[dialog_cout_key] = min_checkout_dialog
                     
-                    min_checkout_dialog = st.session_state[dialog_cin_key] + timedelta(days=1)
-                    
-                    current_dialog_checkout_val = st.session_state[dialog_cout_key]
-                    if current_dialog_checkout_val < min_checkout_dialog:
-                        st.session_state[dialog_cout_key] = min_checkout_dialog
+                new_check_out = st.date_input(
+                    "Ngày check-out mới:",
+                    value=st.session_state[dialog_cout_key],
+                    min_value=min_checkout_dialog,
+                    max_value=st.session_state[dialog_cin_key] + timedelta(days=365*3), 
+                    key=dialog_cout_key 
+                )
+
+                if st.button("Lưu thay đổi", key=f"save_edit_dialog_{booking_id}"):
+                    final_new_check_in = st.session_state[dialog_cin_key]
+                    final_new_check_out = st.session_state[dialog_cout_key]
+
+                    error_messages_dialog = []
+                    if final_new_check_out <= final_new_check_in:
+                        error_messages_dialog.append("Ngày check-out mới phải sau ngày check-in mới.")
+
+                    if not error_messages_dialog:
+                        active_bks_for_check = st.session_state.get('active_bookings', pd.DataFrame())
+                        other_active_bookings = active_bks_for_check[active_bks_for_check['Số đặt phòng'] != booking_id].copy()
+                        room_type_of_booking_edit = booking_data_series['Tên chỗ nghỉ']
                         
-                    new_check_out = st.date_input(
-                        "Ngày check-out mới:",
-                        value=st.session_state[dialog_cout_key],
-                        min_value=min_checkout_dialog,
-                        max_value=st.session_state[dialog_cin_key] + timedelta(days=365*3), 
-                        key=dialog_cout_key 
-                    )
+                        original_check_in_date_from_series = booking_data_series['Check-in Date'].date()
+                        original_check_out_date_from_series = booking_data_series['Check-out Date'].date()
 
-                    if st.button("Lưu thay đổi", key=f"save_edit_dialog_{booking_id}"):
-                        final_new_check_in = st.session_state[dialog_cin_key]
-                        final_new_check_out = st.session_state[dialog_cout_key]
+                        current_iter_date_dialog = final_new_check_in
+                        while current_iter_date_dialog < final_new_check_out:
+                            is_original_stay_day = (original_check_in_date_from_series <= current_iter_date_dialog < original_check_out_date_from_series)
 
-                        error_messages_dialog = []
-                        if final_new_check_out <= final_new_check_in:
-                            error_messages_dialog.append("Ngày check-out mới phải sau ngày check-in mới.")
-
-                        if not error_messages_dialog:
-                            active_bks_for_check = st.session_state.get('active_bookings', pd.DataFrame())
-                            other_active_bookings = active_bks_for_check[active_bks_for_check['Số đặt phòng'] != booking_id].copy()
-                            room_type_of_booking_edit = booking_data_series['Tên chỗ nghỉ']
-                            
-                            original_check_in_date_from_series = booking_data_series['Check-in Date'].date()
-                            original_check_out_date_from_series = booking_data_series['Check-out Date'].date()
-
-                            current_iter_date_dialog = final_new_check_in
-                            while current_iter_date_dialog < final_new_check_out:
-                                is_original_stay_day = (original_check_in_date_from_series <= current_iter_date_dialog < original_check_out_date_from_series)
-
-                                if not is_original_stay_day: 
-                                    availability_specific_dialog = get_room_availability(current_iter_date_dialog, other_active_bookings, [room_type_of_booking_edit], ROOM_UNIT_PER_ROOM_TYPE)
-                                    if availability_specific_dialog.get(room_type_of_booking_edit, 0) <= 0:
-                                        error_msg = f"Loại phòng '{room_type_of_booking_edit}' đã hết vào ngày {current_iter_date_dialog.strftime('%d/%m/%Y')} (cho phần ngày gia hạn)."
-                                        error_messages_dialog.append(error_msg)
-                                        break  
-                                    
-                                    occupied_by_others_on_date_dialog = other_active_bookings[
-                                        (other_active_bookings['Check-in Date'].dt.date <= current_iter_date_dialog) &
-                                        (other_active_bookings['Check-out Date'].dt.date > current_iter_date_dialog)
-                                    ]
-                                    if len(occupied_by_others_on_date_dialog) + 1 > TOTAL_HOTEL_CAPACITY:
-                                        error_msg = f"Khách sạn hết phòng vào ngày {current_iter_date_dialog.strftime('%d/%m/%Y')} (cho phần ngày gia hạn, tổng công suất: {TOTAL_HOTEL_CAPACITY})."
-                                        error_messages_dialog.append(error_msg)
-                                        break  
-                                current_iter_date_dialog += timedelta(days=1)
-                            
-                        if not error_messages_dialog: 
-                            df_to_update = st.session_state.df.copy() 
-                            booking_idx_list = df_to_update[df_to_update['Số đặt phòng'] == booking_id].index
-                            if not booking_idx_list.empty:
-                                idx_to_update = booking_idx_list[0]
-                                df_to_update.loc[idx_to_update, 'Check-in Date'] = pd.Timestamp(final_new_check_in) 
-                                df_to_update.loc[idx_to_update, 'Check-out Date'] = pd.Timestamp(final_new_check_out) 
-                                df_to_update.loc[idx_to_update, 'Ngày đến'] = f"ngày {final_new_check_in.day} tháng {final_new_check_in.month} năm {final_new_check_in.year}"
-                                df_to_update.loc[idx_to_update, 'Ngày đi'] = f"ngày {final_new_check_out.day} tháng {final_new_check_out.month} năm {final_new_check_out.year}"
-                                new_stay_duration_dialog = (final_new_check_out - final_new_check_in).days
-                                df_to_update.loc[idx_to_update, 'Stay Duration'] = new_stay_duration_dialog
-                                total_payment_for_booking_dialog = pd.to_numeric(df_to_update.loc[idx_to_update, 'Tổng thanh toán'], errors='coerce')
-                                df_to_update.loc[idx_to_update, 'Giá mỗi đêm'] = round(total_payment_for_booking_dialog / new_stay_duration_dialog) if new_stay_duration_dialog > 0 else 0.0
+                            if not is_original_stay_day: 
+                                availability_specific_dialog = get_room_availability(current_iter_date_dialog, other_active_bookings, [room_type_of_booking_edit], ROOM_UNIT_PER_ROOM_TYPE)
+                                if availability_specific_dialog.get(room_type_of_booking_edit, 0) <= 0:
+                                    error_msg = f"Loại phòng '{room_type_of_booking_edit}' đã hết vào ngày {current_iter_date_dialog.strftime('%d/%m/%Y')} (cho phần ngày gia hạn)."
+                                    error_messages_dialog.append(error_msg)
+                                    break  
                                 
-                                st.session_state.df = df_to_update
-                                st.session_state.active_bookings = st.session_state.df[st.session_state.df['Tình trạng'] != 'Đã hủy'].copy()
-                                st.session_state.room_types = get_cleaned_room_types(st.session_state.df)
+                                occupied_by_others_on_date_dialog = other_active_bookings[
+                                    (other_active_bookings['Check-in Date'].dt.date <= current_iter_date_dialog) &
+                                    (other_active_bookings['Check-out Date'].dt.date > current_iter_date_dialog)
+                                ]
+                                if len(occupied_by_others_on_date_dialog) + 1 > TOTAL_HOTEL_CAPACITY:
+                                    error_msg = f"Khách sạn hết phòng vào ngày {current_iter_date_dialog.strftime('%d/%m/%Y')} (cho phần ngày gia hạn, tổng công suất: {TOTAL_HOTEL_CAPACITY})."
+                                    error_messages_dialog.append(error_msg)
+                                    break  
+                            current_iter_date_dialog += timedelta(days=1)
+                        
+                    if not error_messages_dialog: 
+                        df_to_update = st.session_state.df.copy() 
+                        booking_idx_list = df_to_update[df_to_update['Số đặt phòng'] == booking_id].index
+                        if not booking_idx_list.empty:
+                            idx_to_update = booking_idx_list[0]
+                            df_to_update.loc[idx_to_update, 'Check-in Date'] = pd.Timestamp(final_new_check_in) 
+                            df_to_update.loc[idx_to_update, 'Check-out Date'] = pd.Timestamp(final_new_check_out) 
+                            df_to_update.loc[idx_to_update, 'Ngày đến'] = f"ngày {final_new_check_in.day} tháng {final_new_check_in.month} năm {final_new_check_in.year}"
+                            df_to_update.loc[idx_to_update, 'Ngày đi'] = f"ngày {final_new_check_out.day} tháng {final_new_check_out.month} năm {final_new_check_out.year}"
+                            new_stay_duration_dialog = (final_new_check_out - final_new_check_in).days
+                            df_to_update.loc[idx_to_update, 'Stay Duration'] = new_stay_duration_dialog
+                            total_payment_for_booking_dialog = pd.to_numeric(df_to_update.loc[idx_to_update, 'Tổng thanh toán'], errors='coerce')
+                            df_to_update.loc[idx_to_update, 'Giá mỗi đêm'] = round(total_payment_for_booking_dialog / new_stay_duration_dialog) if new_stay_duration_dialog > 0 else 0.0
+                            
+                            st.session_state.df = df_to_update
+                            st.session_state.active_bookings = st.session_state.df[st.session_state.df['Tình trạng'] != 'Đã hủy'].copy()
+                            st.session_state.room_types = get_cleaned_room_types(st.session_state.df)
 
-                                st.success(f"Đã cập nhật ngày cho đặt phòng {booking_id}.")
-                                st.session_state.editing_booking_id_for_dialog = None
-                                if dialog_cin_key in st.session_state: del st.session_state[dialog_cin_key]
-                                if dialog_cout_key in st.session_state: del st.session_state[dialog_cout_key]
-                                st.rerun()
-                            else: st.error(f"Lỗi: Không tìm thấy đặt phòng {booking_id} để cập nhật.")
-                        else:
-                            for msg_dialog in error_messages_dialog: st.error(msg_dialog)
+                            st.success(f"Đã cập nhật ngày cho đặt phòng {booking_id}.")
+                            # st.session_state.editing_booking_id_for_dialog = None # REMOVED - Handled outside
+                            if dialog_cin_key in st.session_state: del st.session_state[dialog_cin_key]
+                            if dialog_cout_key in st.session_state: del st.session_state[dialog_cout_key]
+                            st.rerun()
+                        else: st.error(f"Lỗi: Không tìm thấy đặt phòng {booking_id} để cập nhật.")
+                    else:
+                        for msg_dialog in error_messages_dialog: st.error(msg_dialog)
 
-                    if st.button("Hủy", key=f"cancel_edit_dialog_{booking_id}"):
-                        st.session_state.editing_booking_id_for_dialog = None
-                        if dialog_cin_key in st.session_state: del st.session_state[dialog_cin_key]
-                        if dialog_cout_key in st.session_state: del st.session_state[dialog_cout_key]
-                        st.rerun()
+                if st.button("Hủy", key=f"cancel_edit_dialog_{booking_id}"):
+                    # st.session_state.editing_booking_id_for_dialog = None # REMOVED - Handled outside
+                    if dialog_cin_key in st.session_state: del st.session_state[dialog_cin_key]
+                    if dialog_cout_key in st.session_state: del st.session_state[dialog_cout_key]
+                    st.rerun()
 
-                edit_booking_dates_dialog_content(booking_to_edit_series, booking_id_to_edit)
-            else:
-                st.warning(f"Không tìm thấy thông tin chi tiết cho đặt phòng {booking_id_to_edit}.")
-                st.session_state.editing_booking_id_for_dialog = None
-        elif st.session_state.editing_booking_id_for_dialog:
-             st.warning("Không thể tải thông tin đặt phòng để sửa do thiếu dữ liệu.")
-             st.session_state.editing_booking_id_for_dialog = None
+            edit_booking_dates_dialog_content(booking_to_edit_series, booking_id_to_edit)
+        else:
+            st.warning(f"Không tìm thấy thông tin chi tiết cho đặt phòng {_booking_id_to_edit_trigger} để sửa.")
+            # Clean up dialog-specific input keys if we couldn't open the dialog and data wasn't found
+            dialog_cin_key_cleanup = f"dialog_cin_{_booking_id_to_edit_trigger}"
+            dialog_cout_key_cleanup = f"dialog_cout_{_booking_id_to_edit_trigger}"
+            if dialog_cin_key_cleanup in st.session_state: del st.session_state[dialog_cin_key_cleanup]
+            if dialog_cout_key_cleanup in st.session_state: del st.session_state[dialog_cout_key_cleanup]
+    # Removed the elif block that was here:
+    # elif st.session_state.editing_booking_id_for_dialog:
+    #     st.warning("Không thể tải thông tin đặt phòng để sửa do thiếu dữ liệu.")
+    #     st.session_state.editing_booking_id_for_dialog = None
 
 
 # --- TAB PHÂN TÍCH ---
