@@ -33,6 +33,20 @@ from google.oauth2.service_account import Credentials
 import telegram # Added for Telegram bot functionality
 import json # Add this import for parsing JSON string from secrets
 
+# Cấu hình trang Streamlit nâng cao
+st.set_page_config(
+    page_title="🏨 Hotel Management Pro",
+    page_icon="🏨",
+    layout="wide",
+    initial_sidebar_state="expanded",
+    menu_items={
+        'Get Help': 'https://www.example.com/help',
+        'Report a bug': "https://www.example.com/bugs",
+        'About': "# Hotel Management System v3.0.5\nĐã sửa lỗi StreamlitAPIException khi reset form thêm đặt phòng."
+    }
+)
+
+
 # --- TELEGRAM BOT CONFIGURATION ---
 # !!! IMPORTANT: Replace with your actual Bot Token and Chat ID if the test ones change !!!
 # TELEGRAM_BOT_TOKEN = "7998311603:AAGFoxqsbBe5nhocp9Tco635o9tbdT4DTDI" # User provided test token - WILL BE REPLACED BY SECRETS
@@ -188,19 +202,6 @@ try:
 except ImportError:
     BS4_AVAILABLE = False
     st.warning("⚠️ Thư viện BeautifulSoup4 không có sẵn. Chức năng xử lý file HTML sẽ bị vô hiệu hóa. Vui lòng cài đặt: pip install beautifulsoup4")
-
-# Cấu hình trang Streamlit nâng cao
-st.set_page_config(
-    page_title="🏨 Hotel Management Pro",
-    page_icon="🏨",
-    layout="wide",
-    initial_sidebar_state="expanded",
-    menu_items={
-        'Get Help': 'https://www.example.com/help',
-        'Report a bug': "https://www.example.com/bugs",
-        'About': "# Hotel Management System v3.0.5\nĐã sửa lỗi StreamlitAPIException khi reset form thêm đặt phòng."
-    }
-)
 
 # CSS tùy chỉnh
 st.markdown("""
