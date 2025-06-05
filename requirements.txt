@@ -1,0 +1,11 @@
+streamlit
+pandas
+numpy
+plotly
+openpyxl
+xlrd
+PyPDF2
+beautifulsoup4
+gspread
+google-auth-oauthlib
+python-telegram-bot 
