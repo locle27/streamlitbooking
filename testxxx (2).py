@@ -1541,6 +1541,7 @@ with tab_booking_mgmt:
 
             current_data_col_ratios_to_use = default_data_col_ratios[:len(display_columns_original_names_mgmt)]
             final_column_ratios = checkbox_col_ratio + current_data_col_ratios_to_use + action_col_ratio
+            st.markdown("<div style='overflow-x: auto; width: 100%;'>", unsafe_allow_html=True) # Add horizontal scroll for booking list
 
             header_cols_ui = st.columns(final_column_ratios)
 
@@ -1636,6 +1637,7 @@ with tab_booking_mgmt:
                             st.rerun()
                 st.markdown("<hr style='margin-top: 5px; margin-bottom: 5px;'>", unsafe_allow_html=True)
 
+            st.markdown("</div>", unsafe_allow_html=True) # Close horizontal scroll div
             st.markdown("---")
             if st.button("🗑️ Xóa các đặt phòng đã chọn", type="primary", key="bulk_delete_bookings_button"):
                 ids_to_delete_bulk = []
