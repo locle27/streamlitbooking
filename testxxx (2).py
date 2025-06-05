@@ -56,7 +56,7 @@ def load_css(file_name: str):
         st.error(f"Lỗi: Không tìm thấy file CSS '{file_name}'.")
 
 # Load the stylesheet (we will create/update this later)
-load_css("streamlit_app/style.css")
+load_css("style.css")
 
 
 # --- SECRETS & TELEGRAM CONFIG ---
@@ -217,7 +217,7 @@ def load_css(file_name: str):
     except FileNotFoundError:
         st.error(f"Lỗi: Không tìm thấy file CSS '{file_name}'.")
 
-load_css("streamlit_app/style.css")
+load_css("style.css")
 
 # --- HÀM HỖ TRỢ ---
 def parse_app_standard_date(date_input: Any) -> Optional[datetime.date]:
@@ -1026,17 +1026,14 @@ def render_navigation():
             st.session_state.page = 'settings'
     st.markdown("</div>", unsafe_allow_html=True)
 
-render_navigation()
-st.markdown("<hr>", unsafe_allow_html=True)
-
-
 # --- PAGE RENDERING LOGIC ---
-
 def render_dashboard():
     st.header("Bảng điều khiển")
+    df = st.session_state.get('df')
+    active_bookings = st.session_state.get('active_bookings')
     if df is not None and not df.empty and active_bookings is not None:
         today_dt = datetime.date.today()
-        
+
         # --- METRICS ---
         st.markdown("#### Số liệu chính")
         # ... (Metrics logic remains here) ...
@@ -1055,31 +1052,75 @@ def render_dashboard():
 def render_analytics():
     """Renders the analytics page with collector revenue."""
     st.header("Phân Tích")
+    df = st.session_state.get('df')
+    active_bookings = st.session_state.get('active_bookings')
     
     st.subheader("Doanh thu theo Người thu tiền")
-    df = st.session_state.get('df')
     if df is not None and 'Người thu tiền' in df.columns and 'Tổng thanh toán' in df.columns:
         collector_revenue = df.groupby('Người thu tiền')['Tổng thanh toán'].sum().reset_index()
-        collector_revenue_display = collector_revenue.sort_values(by='Tổng thanh toán', ascending=False)
-        collector_revenue_display['Tổng thanh toán'] = collector_revenue_display['Tổng thanh toán'].apply(lambda x: f"{x:,.0f} VND")
+        collector_revenue = collector_revenue.sort_values(by='Tổng thanh toán', ascending=False)
         
-        st.dataframe(collector_revenue_display, use_container_width=True)
+        fig = px.bar(
+            collector_revenue,
+            x='Người thu tiền',
+            y='Tổng thanh toán',
+            title='Tổng doanh thu theo người thu tiền',
+            labels={'Tổng thanh toán': 'Tổng thanh toán (VND)'},
+            color='Người thu tiền',
+            text_auto='.2s'
+        )
+        fig.update_layout(xaxis_tickangle=-45)
+        st.plotly_chart(fig, use_container_width=True)
     else:
         st.warning("Không có dữ liệu 'Người thu tiền' hoặc 'Tổng thanh toán' để hiển thị.")
 
+
 def render_calendar():
     st.header("Lịch Phòng")
+    df = st.session_state.get('df')
+    active_bookings = st.session_state.get('active_bookings')
     # ... (existing code) ...
+
+
+def render_manage_bookings():
+    st.header("Quản lý Đặt phòng")
+    df = st.session_state.get('df')
+    active_bookings = st.session_state.get('active_bookings')
+    # ... (existing booking management logic) ...
+
+def render_settings():
+    st.header("Cài đặt & Tiện ích")
+    df = st.session_state.get('df')
+    active_bookings = st.session_state.get('active_bookings')
+    # ... (existing settings logic) ...
 
 # Router to display the correct page
 page = st.session_state.page
-if page == 'dashboard':
-    render_dashboard()
-elif page == 'analytics': # New Route
-    render_analytics()
-elif page == 'calendar':
-    render_calendar()
-elif page == 'manage':
-    render_manage_bookings()
-elif page == 'settings':
-    render_settings()
+
+# --- MAIN APP LOGIC ---
+if __name__ == "__main__":
+    # --- Data Loading and Initialization ---
+    initialize_data()
+    df = st.session_state.get('df')
+    active_bookings = st.session_state.get('active_bookings')
+
+    # --- UI Rendering ---
+    render_header()
+    render_navigation()
+    st.markdown("<hr>", unsafe_allow_html=True)
+
+    # Page routing
+    page = st.session_state.get('page', 'dashboard')
+
+    if page == 'dashboard':
+        render_dashboard()
+    elif page == 'analytics':
+        render_analytics()
+    elif page == 'calendar':
+        render_calendar()
+    elif page == 'manage':
+        render_manage_bookings()
+    elif page == 'settings':
+        render_settings()
+    else:
+        render_dashboard() # Default
