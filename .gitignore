@@ -166,4 +166,5 @@ secrets/
 
 # Specific to your project (if needed)
 # streamlit-api-461302-5dfbcb4beaba.json # Explicitly ignore if you want to be sure, though it's better handled by not adding it with `git add` 
-streamlit-api-461302-5dfbcb4beaba.json 
+streamlit-api-461302-5dfbcb4beaba.json
+*.pyc 

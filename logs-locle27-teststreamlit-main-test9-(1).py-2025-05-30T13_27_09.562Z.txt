@@ -1,0 +1,70 @@
+
+[     UTC     ] Logs for testapp-dr6eivqrxph9gq8bbiy3sx.streamlit.app/
+────────────────────────────────────────────────────────────────────────────────────────
+[13:23:36] 🖥 Provisioning machine...
+[13:23:36] 🎛 Preparing system...
+[13:23:36] ⛓ Spinning up manager process...
+[13:23:38] 🚀 Starting up repository: 'teststreamlit', branch: 'main', main module: 'test9 (1).py'
+[13:23:38] 🐙 Cloning repository...
+[13:23:42] 🐙 Cloning into '/mount/src/teststreamlit'...
+
+[13:23:42] 🐙 Cloned repository!
+[13:23:42] 🐙 Pulling code changes from Github...
+[13:23:43] 📦 Processing dependencies...
+Prepared 37 packages in 2.45s
+Installed 37 packages in 122ms
+ + altair==5.5.0
+ + attrs==25.3.0
+ + blinker==1.9.0
+ + cachetools==5.5.2
+ + certifi==2025.4.26
+ + charset-normalizer==3.4.2
+ + click==8.2.1
+ + gitdb==4.0.12
+ + gitpython==3.1.44
+ + idna==3.10
+ + jinja2==3.1.6
+ + jsonschema==4.24.0
+ + jsonschema-specifications==2025.4.1[2025-05-30 13:23:46.342510] 
+ + markupsafe==3.0.2
+ + narwhals==1.41.0
+ + numpy==2.2.6
+ + packaging==24.2
+ + pandas==2.2.3[2025-05-30 13:23:46.342985] 
+ + pillow==11.2.1
+ + protobuf==6.31.1
+ + pyarrow==20.0.0
+ + pydeck==0.9.1
+ + python-dateutil==2.9.0.post0
+ + pytz==2025.2
+ + referencing==0.36.2
+ + requests==2.32.3
+ +[2025-05-30 13:23:46.343305]  rpds-py==0.25.1
+ + six==1.17.0
+ + smmap==5.0.2
+ + streamlit==1.45.1
+ + tenacity==9.1.2
+ + toml==0.10.2
+ + tornado==6.5.1
+ [2025-05-30 13:23:46.343521] + typing-extensions==4.13.2
+ + tzdata==2025.2
+ + urllib3==2.4.0
+ + watchdog==6.0.0
+[13:23:46] 🐍 Python dependencies were installed from /mount/src/teststreamlit/uv.lock using uv-sync.
+[13:23:46] 📦 WARN: More than one requirements file detected in the repository. Available options: uv-sync /mount/src/teststreamlit/uv.lock, uv /mount/src/teststreamlit/requirements.txt, poetry /mount/src/teststreamlit/pyproject.toml. Used: uv-sync with /mount/src/teststreamlit/uv.lock
+Check if streamlit is installed
+Streamlit is already installed
+[13:23:48] 📦 Processed dependencies!
+
+
+
+2025-05-30 13:25:37.594 Uncaught app execution
+Traceback (most recent call last):
+  File "/home/adminuser/venv/lib/python3.13/site-packages/streamlit/runtime/scriptrunner/exec_code.py", line 121, in exec_func_with_error_handling
+    result = func()
+  File "/home/adminuser/venv/lib/python3.13/site-packages/streamlit/runtime/scriptrunner/script_runner.py", line 645, in code_to_exec
+    exec(code, module.__dict__)
+    ~~~~^^^^^^^^^^^^^^^^^^^^^^^
+  File "/mount/src/teststreamlit/test9 (1).py", line 17, in <module>
+    import plotly.graph_objects as go
+ModuleNotFoundError: No module named 'plotly'

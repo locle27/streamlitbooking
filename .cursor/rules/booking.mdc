@@ -3,6 +3,11 @@ description:
 globs: 
 alwaysApply: true
 ---
+---
+description:
+globs:
+alwaysApply: true
+---
 # Interactive Feedback Rule
 
 - **Always Use Interactive Feedback for Questions:**
@@ -35,10 +40,11 @@ alwaysApply: true
   // ✅ DO: Call interactive feedback before completing requests
   // After implementing a feature
   await mcp_interactive_feedback({
-    project_directory: "C:\\Users\\T14\\Desktop\\streamlit_app
+    project_directory: "C:\\Users\\T14\\Desktop\\streamlit_app", 
     summary: "Completed user authentication implementation with JWT"
   });
   ```
+
 
   ```typescript
   // ❌ DON'T: Ask questions directly without interactive feedback
@@ -65,4 +71,3 @@ alwaysApply: true
   - Always use the full absolute path for project_directory
   - Use interactive feedback as a quality gate, not a blocker
   - Respect empty feedback responses as approval to proceed
-
