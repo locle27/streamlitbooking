@@ -1100,7 +1100,7 @@ page = st.session_state.page
 # --- MAIN APP LOGIC ---
 if __name__ == "__main__":
     # --- Data Loading and Initialization ---
-    initialize_data()
+    # initialize_data() # This function call is causing a NameError and will be removed.
     df = st.session_state.get('df')
     active_bookings = st.session_state.get('active_bookings')
 
