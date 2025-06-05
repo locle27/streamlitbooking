@@ -1111,6 +1111,19 @@ if st.session_state.page == 'dashboard':
         booking_source_chart = create_booking_source_chart(df)
         st.plotly_chart(booking_source_chart, use_container_width=True)
 
+        st.markdown("---")
+
+        # --- Collector Revenue ---
+        st.markdown("#### Doanh thu theo người thu tiền")
+        if 'Người thu tiền' in df.columns and 'Tổng thanh toán' in df.columns:
+            collector_revenue = df.groupby('Người thu tiền')['Tổng thanh toán'].sum().reset_index()
+            collector_revenue_display = collector_revenue.sort_values(by='Tổng thanh toán', ascending=False)
+            collector_revenue_display['Tổng thanh toán'] = collector_revenue_display['Tổng thanh toán'].apply(lambda x: f"{x:,.0f} VND")
+            
+            st.dataframe(collector_revenue_display, use_container_width=True)
+        else:
+            st.warning("Cột 'Người thu tiền' hoặc 'Tổng thanh toán' không có trong dữ liệu để tính doanh thu.")
+
     else:
         st.info("Tải dữ liệu để xem bảng điều khiển.")
 
