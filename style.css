@@ -1,0 +1,247 @@
+/* --- DEFAULT STYLES (MOBILE-FIRST) --- */
+:root {
+    --primary-color: #1f77b4; --secondary-color: #ff7f0e; --success-color: #2ca02c;
+    --warning-color: #ffbb00; --danger-color: #d62728; --info-color: #17a2b8;
+    --light-bg: #f8f9fa; --dark-bg: #343a40;
+}
+
+body {
+    background-color: var(--light-bg);
+}
+
+/* 1. TYPOGRAPHY & MAIN LAYOUT */
+h1 { font-size: 1.8rem !important; text-align: center; color: var(--dark-bg); }
+h2 { font-size: 1.5rem !important; text-align: center; color: #495057; border-bottom: 2px solid var(--primary-color); padding-bottom: 0.5rem; margin-top: 1.5rem; }
+h3 { font-size: 1.3rem !important; color: var(--dark-bg); }
+h4, h5 { font-size: 1.1rem !important; }
+
+/* Main app container */
+.stApp {
+    padding: 0 1rem;
+}
+
+/* 2. NAVIGATION */
+.nav-container {
+    background-color: white;
+    padding: 0.5rem;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+    margin-bottom: 1rem;
+}
+.nav-container .stButton > button {
+    background-color: transparent;
+    color: var(--dark-bg);
+    border: none;
+    font-weight: 600;
+    transition: background-color 0.2s, color 0.2s;
+}
+.nav-container .stButton > button:hover {
+    background-color: #e9ecef;
+    color: var(--primary-color);
+}
+.nav-container .stButton > button:focus {
+    background-color: var(--primary-color);
+    color: white;
+    box-shadow: none;
+}
+
+
+/* 3. MOBILE-FIRST CARDS & BUTTONS */
+/* Default full-width buttons for easy tapping */
+.stButton > button {
+    width: 100%;
+    padding: 0.8rem;
+    font-size: 1rem;
+    border-radius: 8px;
+    border: none;
+    background-color: var(--primary-color);
+    color: white;
+    font-weight: bold;
+}
+.stButton > button:hover {
+    background-color: #0056b3;
+}
+
+/* Metric cards for dashboard */
+.metric-card {
+    background: white; 
+    padding: 1rem; 
+    border-radius: 10px; 
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08); 
+    border-left: 5px solid var(--primary-color); 
+    margin-bottom: 1rem;
+    text-align: center;
+}
+.metric-card h3 {
+    font-size: 2.5rem;
+}
+
+/* Expander as a card */
+.stExpander {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+.stExpander .streamlit-expanderHeader {
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+.stExpander div[data-testid="stExpanderDetails"] {
+    padding: 1rem !important;
+    background-color: #f8f9fa;
+}
+
+
+/* 4. INPUTS */
+.stDateInput > div > div > input,
+div[data-baseweb="select"] > div, 
+.stTextInput > div > div > input,
+.stTextArea > div > textarea,
+.stNumberInput > div > div > input {
+    padding: 0.8rem;
+    font-size: 1rem;
+    border-radius: 8px;
+    border: 1px solid #ced4da;
+}
+
+
+/* --- DESKTOP STYLES (for screens larger than 768px) --- */
+@media (min-width: 769px) {
+    /* Widen layout on desktop */
+    .stApp {
+        padding: 0 5rem;
+    }
+    
+    .nav-container .st-emotion-cache-13ln4b4 {
+        display: flex;
+        flex-direction: row;
+        gap: 1rem;
+    }
+
+    h1 { font-size: 2.5rem !important; }
+    h2 { font-size: 2rem !important; }
+    
+    /* Restore button auto-width on desktop */
+    .stButton > button {
+        width: auto;
+    }
+}
+
+/* 1. TYPOGRAPHY & LAYOUT */
+/* Make all columns stack vertically by default for a single-column mobile layout */
+div[data-testid="stTabs"] section[role="tabpanel"] div[data-testid="stHorizontalBlock"],
+.st-emotion-cache-0 > div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"] {
+    flex-direction: column !important;
+    gap: 1.2rem; /* Add consistent spacing */
+}
+
+/* Typography optimized for mobile readability */
+h1 { font-size: 1.7rem !important; text-align: center; }
+h2 { font-size: 1.4rem !important; text-align: center; }
+h3 { font-size: 1.2rem !important; }
+h4, h5 { font-size: 1.1rem !important; }
+
+/* Full-width buttons for easy tapping */
+.stButton > button {
+    width: 100%;
+    padding: 0.8rem;
+    font-size: 1rem;
+    border-radius: 8px; /* Slightly less rounded for a modern feel */
+}
+
+/* Larger, more accessible input fields */
+.stDateInput > div > div > input,
+div[data-baseweb="select"] > div, 
+.stTextInput > div > div > input,
+.stTextArea > div > textarea,
+.stNumberInput > div > div > input {
+    padding: 0.8rem;
+    font-size: 1rem;
+}
+
+/* 2. SPECIFIC COMPONENT STYLING */
+/* Dashboard Metrics */
+.metric-card {
+    background: white; padding: 1rem; border-radius: 10px; 
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08); 
+    border-left: 5px solid var(--primary-color); 
+    margin-bottom: 0;
+    text-align: center;
+}
+.metric-card h3 {
+    font-size: 2.5rem; /* Make numbers pop */
+}
+
+/* Calendar */
+.day-header { font-size: 0.7em; padding: 5px 0; }
+.day-cell { min-height: 55px; padding: 4px 1px; }
+.day-number { font-size: 0.9em; }
+.dot-indicator { font-size: 1.4em; }
+.day-status { font-size: 0.65em; }
+
+/* Calendar navigation buttons shouldn't be full-width */
+section[aria-labelledby*="tab-1"] .st-emotion-cache-0 > div[data-testid="stVerticalBlock"] > div[data-testid="stHorizontalBlock"] .stButton > button {
+     width: auto;
+     padding: 0.5rem 1rem;
+}
+
+/* Booking Management List */
+section[aria-labelledby*="tab-2"] .stExpander {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    margin: 0 !important;
+}
+section[aria-labelledby*="tab-2"] .stExpander .streamlit-expanderHeader {
+    font-size: 1rem;
+    line-height: 1.4;
+}
+section[aria-labelledby*="tab-2"] div[data-testid="stExpanderDetails"] {
+    padding: 1rem !important;
+    background-color: #f8f9fa;
+}
+section[aria-labelledby*="tab-2"] hr {
+    display: none; /* No need for <hr> when using cards */
+}
+
+/* Analytics Metrics */
+.stMetric {
+    border: 1px solid #ddd;
+    padding: 1rem;
+    border-radius: 8px;
+    text-align: center;
+}
+
+/* General App Elements */
+.dataframe { border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+.loading-spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary-color); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+.guest-separator { border-bottom: 1px dashed #ced4da; margin: 4px 0; width: 90%; align-self: center; }
+
+/* Card-based view for booking management on mobile */
+.mobile-booking-card {
+    background-color: #f9f9f9;
+    border: 1px solid #e0e0e0;
+    border-left: 5px solid var(--secondary-color);
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+.mobile-booking-card .stMarkdownContainer p {
+    font-size: 0.9em;
+    margin-bottom: 4px;
+}
+.mobile-booking-card .stButton > button {
+    width: 100%;
+    margin-bottom: 5px;
+}
+.mobile-booking-card hr {
+    display: none;
+}
+div[style*="overflow-x: auto"] {
+    display: none !important;
+}
+div[style*="overflow-x: auto"] + div[data-testid="stHorizontalBlock"],
+div[style*="overflow-x: auto"] + div[data-testid="stHorizontalBlock"] + hr {
+    display: none !important;
+} 
