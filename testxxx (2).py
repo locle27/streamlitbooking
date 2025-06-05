@@ -1124,3 +1124,69 @@ if __name__ == "__main__":
         render_settings()
     else:
         render_dashboard() # Default
+
+# --- DATA INITIALIZATION LOGIC ---
+def initialize_data():
+    """
+    Initializes or loads the booking data.
+    Checks for uploaded files, Google Sheets connections, or uses demo data.
+    """
+    if 'df' not in st.session_state or st.session_state.df is None:
+        st.session_state.df = None
+        st.session_state.active_bookings = None
+        st.session_state.data_source = None
+        st.session_state.uploaded_file_name = None
+
+        # This section can be expanded later to automatically connect to GSheets
+        # For now, it prioritizes file uploads or demo data.
+        
+        # In a real-world scenario, you might check for a saved GSheet ID
+        # and attempt to load from there first.
+        # if st.session_state.get('gsheet_id'):
+        #     # Attempt to load from Google Sheets
+        # else:
+        
+        # For now, we just ensure the state is clean if no data is loaded.
+        pass # No automatic loading, waits for user action in the UI.
+
+# --- UI & PAGE RENDERING LOGIC ---
+def render_header():
+    """Renders the main header and data loading UI."""
+    st.title("🏨 Quản lý Khách sạn PRO")
+    
+    with st.expander("Tải Dữ liệu & Tùy chọn", expanded=True):
+        data_load_cols = st.columns([2, 1, 1])
+        
+        with data_load_cols[0]:
+            uploaded_file = st.file_uploader(
+                "Tải tệp đặt phòng (Excel, PDF, HTML)",
+                type=['xls', 'xlsx', 'pdf', 'html'],
+                help="Tải lên tệp dữ liệu từ Booking.com để bắt đầu."
+            )
+            if uploaded_file:
+                if uploaded_file.name != st.session_state.get('uploaded_file_name'):
+                    with st.spinner(f"Đang xử lý {uploaded_file.name}..."):
+                        df, active_bookings = load_data_from_file(uploaded_file)
+                        if df is not None:
+                            st.session_state.df = df
+                            st.session_state.active_bookings = active_bookings
+                            st.session_state.room_types = get_cleaned_room_types(df)
+                            st.session_state.data_source = 'file'
+                            st.session_state.uploaded_file_name = uploaded_file.name
+                            st.success(f"Đã tải thành công {len(df)} đặt phòng.")
+                            st.rerun()
+                        else:
+                            st.error("Không thể xử lý tệp. Vui lòng thử lại hoặc kiểm tra định dạng tệp.")
+        
+        with data_load_cols[1]:
+            if st.button("Sử dụng Dữ liệu Demo", use_container_width=True):
+                df, active_bookings = create_demo_data()
+                st.session_state.df = df
+                st.session_state.active_bookings = active_bookings
+                st.session_state.room_types = get_cleaned_room_types(df)
+                st.session_state.data_source = 'demo'
+                st.session_state.uploaded_file_name = 'Demo Data'
+                st.rerun()
+
+    if st.session_state.get('uploaded_file_name'):
+        st.caption(f"Nguồn dữ liệu hiện tại: `{st.session_state.uploaded_file_name}`")
