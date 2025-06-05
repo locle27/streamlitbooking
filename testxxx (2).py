@@ -223,6 +223,39 @@ st.markdown("""
     .loading-spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary-color); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center; font-family: 'Segoe UI', sans-serif; } .day-header { font-weight: bold; padding: 8px 0; background-color: #e9ecef; color: #495057; border-radius: 5px; font-size: 0.9em; } .day-cell { border: 1px solid #dee2e6; padding: 8px 2px; min-height: 75px; display: flex; flex-direction: column; justify-content: space-between; align-items: center; border-radius: 5px; cursor: pointer; transition: background-color 0.2s, box-shadow 0.2s; position: relative; background-color: #fff; } .day-cell:hover { background-color: #f8f9fa; box-shadow: 0 0 5px rgba(0,0,0,0.1); } .day-button-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; z-index: 10; cursor: pointer; } .day-number { font-size: 1.1em; font-weight: bold; margin-bottom: 3px; color: #343a40; } .day-status { font-size: 0.75em; color: #6c757d; padding: 0 2px; word-break: break-word; } .dot-indicator { font-size: 1.8em; line-height: 0.5; margin-top: -2px; margin-bottom: 2px; } .dot-green { color: var(--success-color); } .dot-orange { color: var(--warning-color); } .dot-red { color: var(--danger-color); } .day-disabled { color: #adb5bd; background-color: #f1f3f5; cursor: not-allowed; } .day-today { border: 2px solid var(--primary-color); background-color: #e7f3ff; } .day-selected { background-color: #cfe2ff; border: 2px solid #0a58ca; box-shadow: 0 0 8px rgba(10, 88, 202, 0.3); } .guest-separator { border-bottom: 1px dashed #ced4da; margin: 4px 0; width: 90%; align-self: center; } .calendar-details-expander .streamlit-expanderHeader { font-size: 1.1em; font-weight: bold; } .calendar-details-expander p { margin-bottom: 0.3rem; }
+    /* --- Mobile-specific styles --- */
+    @media (max-width: 768px) { /* Apply these styles if screen width is 768px or less */
+        .metric-card {
+            padding: 0.8rem; /* Smaller padding for mobile */
+            margin-bottom: 0.8rem;
+        }
+        h3 { /* Example: Make H3 smaller on mobile */
+            font-size: 1.25rem;
+        }
+        .stButton > button {
+            padding: 0.5rem 1rem; /* Smaller buttons on mobile */
+            font-size: 0.9rem;
+        }
+        .day-cell {
+            min-height: 60px; /* Smaller day cells */
+            padding: 5px 1px;
+        }
+        .day-number {
+            font-size: 1em; /* Smaller day numbers */
+        }
+        .day-status {
+            font-size: 0.7em; /* Smaller day status text */
+        }
+        /* General input field styling for mobile */
+        .stDateInput > div > div > input,
+        div[data-baseweb="select"] > div, 
+        .stTextInput > div > div > input,
+        .stTextArea > div > textarea,
+        .stNumberInput > div > div > input {
+            padding: 0.4rem;
+            font-size: 0.9rem;
+        }
+    }
 </style>
 """, unsafe_allow_html=True)
 
