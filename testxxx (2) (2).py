@@ -223,39 +223,7 @@ st.markdown("""
     .loading-spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary-color); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center; font-family: 'Segoe UI', sans-serif; } .day-header { font-weight: bold; padding: 8px 0; background-color: #e9ecef; color: #495057; border-radius: 5px; font-size: 0.9em; } .day-cell { border: 1px solid #dee2e6; padding: 8px 2px; min-height: 75px; display: flex; flex-direction: column; justify-content: space-between; align-items: center; border-radius: 5px; cursor: pointer; transition: background-color 0.2s, box-shadow 0.2s; position: relative; background-color: #fff; } .day-cell:hover { background-color: #f8f9fa; box-shadow: 0 0 5px rgba(0,0,0,0.1); } .day-button-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; z-index: 10; cursor: pointer; } .day-number { font-size: 1.1em; font-weight: bold; margin-bottom: 3px; color: #343a40; } .day-status { font-size: 0.75em; color: #6c757d; padding: 0 2px; word-break: break-word; } .dot-indicator { font-size: 1.8em; line-height: 0.5; margin-top: -2px; margin-bottom: 2px; } .dot-green { color: var(--success-color); } .dot-orange { color: var(--warning-color); } .dot-red { color: var(--danger-color); } .day-disabled { color: #adb5bd; background-color: #f1f3f5; cursor: not-allowed; } .day-today { border: 2px solid var(--primary-color); background-color: #e7f3ff; } .day-selected { background-color: #cfe2ff; border: 2px solid #0a58ca; box-shadow: 0 0 8px rgba(10, 88, 202, 0.3); } .guest-separator { border-bottom: 1px dashed #ced4da; margin: 4px 0; width: 90%; align-self: center; } .calendar-details-expander .streamlit-expanderHeader { font-size: 1.1em; font-weight: bold; } .calendar-details-expander p { margin-bottom: 0.3rem; }
-    /* --- Mobile-specific styles --- */
-    @media (max-width: 768px) { /* Apply these styles if screen width is 768px or less */
-        .metric-card {
-            padding: 0.8rem; /* Smaller padding for mobile */
-            margin-bottom: 0.8rem;
-        }
-        h3 { /* Example: Make H3 smaller on mobile */
-            font-size: 1.25rem;
-        }
-        .stButton > button {
-            padding: 0.5rem 1rem; /* Smaller buttons on mobile */
-            font-size: 0.9rem;
-        }
-        .day-cell {
-            min-height: 60px; /* Smaller day cells */
-            padding: 5px 1px;
-        }
-        .day-number {
-            font-size: 1em; /* Smaller day numbers */
-        }
-        .day-status {
-            font-size: 0.7em; /* Smaller day status text */
-        }
-        /* General input field styling for mobile */
-        .stDateInput > div > div > input,
-        div[data-baseweb="select"] > div, 
-        .stTextInput > div > div > input,
-        .stTextArea > div > textarea,
-        .stNumberInput > div > div > input {
-            padding: 0.4rem;
-            font-size: 0.9rem;
-\
-        }\n\n        /* --- Further Calendar Mobile Optimizations --- */\n        .day-header { /* Calendar day names like "Thứ 2" */\n            font-size: 0.75em;\n            padding: 5px 0;\n        }\n        .day-cell { /* Individual day cells in calendar */\n            min-height: 50px; /* Even smaller */\n            padding: 3px 1px;\n            font-size: 0.9em; /* Affects text inside if not overridden */\n        }\n        .day-number { /* Number in the day cell */\n            font-size: 0.9em; /* Smaller */\n            margin-bottom: 1px;\n        }\n        .day-status { /* "Trống", "Hết phòng" text */\n            font-size: 0.65em; /* Smaller */\n        }\n        .dot-indicator { /* Status dots */\n            font-size: 1.5em;\n        }\n        /* For the expanded day details in calendar */\n        .stExpander .streamlit-expanderHeader { /* Expander header text */\n            font-size: 1em;\n        }\n        .stExpander div[data-testid="stExpanderDetails"] p,\n        .stExpander div[data-testid="stExpanderDetails"] div[data-testid="stMarkdownContainer"] { /* Text within calendar day details */\n            font-size: 0.85em;\n            margin-bottom: 0.2rem;\n        }\n        .stExpander div[data-testid="stExpanderDetails"] h5 { /* Headers like "Khách Check-in" */\n            font-size: 1em;\n            margin-bottom: 0.3rem;\n        }\n\n        /* --- Booking Management List Mobile Optimizations --- */\n        /* Target the general text size within the booking management list section */\n        div[data-testid="stVerticalBlock"] div[data-testid="stHorizontalBlock"] div[data-testid="stMarkdownContainer"] p,\n        div[data-testid="stVerticalBlock"] div[data-testid="stHorizontalBlock"] div[data-testid="stText"] {\n            font-size: 0.8rem; /* Smaller text for booking details */\n            line-height: 1.3; /* Adjust line height for readability */\n        }\n        div[data-testid="stVerticalBlock"] div[data-testid="stHorizontalBlock"] .stButton > button { /* Edit/Delete buttons */\n            padding: 0.3rem 0.6rem;\n            font-size: 0.8rem;\n            min-width: 30px; /* Ensure buttons don't get too squished */\n        }\n        /* Reduce header button size in booking management for sorting */\n        div[data-testid="stTabs"] section[aria-labelledby*="tab-"] div[data-testid="stHorizontalBlock"] .stButton > button {\n            font-size: 0.75em; /* Smaller text for sort buttons */\n            padding: 0.2rem 0.4rem;\n        }\n        hr { /* Reduce margin of <hr> used as separators in booking list */\n            margin-top: 2px !important;\n            margin-bottom: 2px !important;\n        }\n        /* Ensure booking action buttons container can wrap if needed */\n        div[data-testid="stVerticalBlock"] div[data-testid="stHorizontalBlock"] > div[data-testid="stHorizontalBlock"] { /* This targets the container of edit/delete buttons */\n            flex-wrap: wrap; \n        }\n    }\n/* Card-based view for booking management on mobile */\n        .mobile-booking-card {\n            background-color: #f9f9f9;\n            border: 1px solid #e0e0e0;\n            border-left: 5px solid var(--secondary-color);\n            border-radius: 8px;\n            padding: 10px;\n            margin-bottom: 12px;\n            box-shadow: 0 1px 3px rgba(0,0,0,0.08);\n        }\n        .mobile-booking-card .stMarkdownContainer p {\n            font-size: 0.9em;\n            margin-bottom: 4px;\n        }\n        .mobile-booking-card .stButton > button {\n            width: 100%;\n            margin-bottom: 5px;\n        }\n        .mobile-booking-card hr {\n            display: none;\n        }\n        div[style*=\"overflow-x: auto\"] {\n            display: none !important;\n        }\n        div[style*=\"overflow-x: auto\"] + div[data-testid=\"stHorizontalBlock\"],\n        div[style*=\"overflow-x: auto\"] + div[data-testid=\"stHorizontalBlock\"] + hr {\n            display: none !important;\n        }\n</style>
+</style>
 """, unsafe_allow_html=True)
 
 # --- HÀM HỖ TRỢ ---
@@ -1541,7 +1509,6 @@ with tab_booking_mgmt:
 
             current_data_col_ratios_to_use = default_data_col_ratios[:len(display_columns_original_names_mgmt)]
             final_column_ratios = checkbox_col_ratio + current_data_col_ratios_to_use + action_col_ratio
-            st.markdown("<div style='overflow-x: auto; width: 100%;'>", unsafe_allow_html=True) # Add horizontal scroll for booking list
 
             header_cols_ui = st.columns(final_column_ratios)
 
@@ -1571,7 +1538,6 @@ with tab_booking_mgmt:
             current_view_checkbox_info = {}
 
             for original_df_index, original_row_mgmt in df_filtered_for_table.iterrows():
-                st.markdown("<div class=\'mobile-booking-card\'>", unsafe_allow_html=True) # Start mobile card
                 cols_display_row_mgmt = st.columns(final_column_ratios)
                 booking_id_for_key = original_row_mgmt.get('Số đặt phòng', f"index_{original_df_index}")
                 checkbox_key = f"select_booking_cb_{booking_id_for_key}_{original_df_index}"
@@ -1636,10 +1602,8 @@ with tab_booking_mgmt:
                             else:
                                 st.session_state.last_action_message = "Lỗi: Không tìm thấy DataFrame hoặc cột 'Số đặt phòng' để xóa."
                             st.rerun()
-                st.markdown("</div>", unsafe_allow_html=True) # Close mobile card
                 st.markdown("<hr style='margin-top: 5px; margin-bottom: 5px;'>", unsafe_allow_html=True)
 
-            st.markdown("</div>", unsafe_allow_html=True) # Close horizontal scroll div
             st.markdown("---")
             if st.button("🗑️ Xóa các đặt phòng đã chọn", type="primary", key="bulk_delete_bookings_button"):
                 ids_to_delete_bulk = []
@@ -2655,7 +2619,7 @@ with tab_analytics:
                 total_guests_checked_in_actual = len(checked_in_to_date_df)
                 checked_in_to_date_df['Stay Duration'] = pd.to_numeric(checked_in_to_date_df['Stay Duration'], errors='coerce').fillna(0)
                 total_nights_checked_in_actual = checked_in_to_date_df['Stay Duration'].sum()
-    else:
+            else:
                 total_guests_checked_in_actual = 0
                 total_nights_checked_in_actual = 0
 
@@ -2728,7 +2692,7 @@ with tab_analytics:
                         fig_guest_revenue_anl = px.bar(guest_revenue_chart_df_anl, x='Tên khách', y='Tổng thanh toán (VND)', title='Top 15 khách hàng theo tổng thanh toán', labels={'Tổng thanh toán (VND)': 'Tổng thanh toán (VND)', 'Tên khách': 'Tên khách hàng'}, color='Tổng thanh toán (VND)', color_continuous_scale=px.colors.sequential.Viridis, text_auto='.2s')
                         fig_guest_revenue_anl.update_layout(xaxis_tickangle=-45, height=400); st.plotly_chart(fig_guest_revenue_anl, use_container_width=True)
                 else: st.info("Không đủ dữ liệu khách hàng để phân tích.")
-    st.markdown("---")
+                st.markdown("---")
                 st.subheader("Phân tích khách hàng theo Genius")
                 if 'Thành viên Genius' in analytics_df_filtered.columns:
                     col_genius_anl1, col_genius_anl2 = st.columns(2)
