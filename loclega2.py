@@ -1493,7 +1493,7 @@ with tab_booking_mgmt:
                 st.success(st.session_state.last_action_message)
                 st.session_state.last_action_message = None
 
-# --- TAB THÊM TỪ ẢNH (Đã nâng cấp) ---
+# --- TAB THÊM TỪ ẢNH (Đã sửa lỗi và nâng cấp) ---
 with tab_add_from_image:
     st.header("📸 Thêm Đặt Phòng từ Ảnh")
     st.info(
@@ -1502,11 +1502,14 @@ with tab_add_from_image:
         "2. **Dán ảnh chụp màn hình** trực tiếp vào khung bên dưới (Ctrl+V)."
     )
 
-    # Khởi tạo session state nếu chưa có
+    # --- KHỞI TẠO CÁC BIẾN SESSION STATE CẦN THIẾT ---
     if 'image_bytes_to_process' not in st.session_state:
         st.session_state.image_bytes_to_process = None
     if 'extracted_list_data' not in st.session_state:
         st.session_state.extracted_list_data = None
+    # THAY ĐỔI 1: Thêm state để lưu trữ dữ liệu thô từ component
+    if 'pasted_b64_data' not in st.session_state:
+        st.session_state.pasted_b64_data = None
 
     # --- PHẦN NHẬP LIỆU ---
     col1, col2 = st.columns(2)
@@ -1519,34 +1522,43 @@ with tab_add_from_image:
             key="image_booking_list_uploader"
         )
         if uploaded_image_file:
-            # Nếu có file mới, lưu nó vào session state để xử lý
             st.session_state.image_bytes_to_process = uploaded_image_file.getvalue()
-            st.session_state.extracted_list_data = None # Xóa kết quả cũ
+            st.session_state.extracted_list_data = None
+            st.session_state.pasted_b64_data = None # Xóa dữ liệu dán cũ
             st.rerun()
 
     with col2:
         st.subheader("Cách 2: Dán ảnh")
-        # Đọc nội dung của component HTML
         with open("components/paste_image.html", "r", encoding="utf-8") as f:
             html_code = f.read()
         
-        # Gọi component và nhận giá trị trả về (chuỗi Base64)
-        pasted_image_b64 = components.html(html_code, height=170)
+        component_return_value = components.html(html_code, height=170)
 
-        if pasted_image_b64:
-            try:
-                # Tách phần header của Base64 (ví dụ: "data:image/png;base64,")
-                image_data = pasted_image_b64.split(",")[1]
-                # Giải mã Base64 thành bytes
-                st.session_state.image_bytes_to_process = base64.b64decode(image_data)
-                st.session_state.extracted_list_data = None # Xóa kết quả cũ
-                st.rerun()
-            except Exception as e:
-                st.error(f"Không thể xử lý ảnh được dán: {e}")
+        # THAY ĐỔI 2: Logic nhận dữ liệu mới - Chỉ lưu và rerun
+        if component_return_value and component_return_value != st.session_state.pasted_b64_data:
+            # Chỉ lưu dữ liệu vào state và rerun, không xử lý ngay
+            st.session_state.pasted_b64_data = component_return_value
+            st.session_state.extracted_list_data = None
+            st.session_state.image_bytes_to_process = None # Xóa dữ liệu tải lên cũ
+            st.rerun()
 
     st.markdown("---")
 
-    # --- PHẦN XỬ LÝ VÀ HIỂN THỊ ---
+    # --- PHẦN XỬ LÝ DỮ LIỆU DÁN (CHẠY Ở LẦN RERUN THỨ 2) ---
+    # THAY ĐỔI 3: Tách riêng khối xử lý dữ liệu dán
+    if st.session_state.pasted_b64_data and st.session_state.image_bytes_to_process is None:
+        try:
+            # Bây giờ xử lý dữ liệu từ session_state một cách an toàn
+            image_data = st.session_state.pasted_b64_data.split(",")[1]
+            st.session_state.image_bytes_to_process = base64.b64decode(image_data)
+            # Xóa dữ liệu thô sau khi đã xử lý để tránh lặp lại
+            st.session_state.pasted_b64_data = None
+            st.rerun() # Rerun một lần nữa để hiển thị ảnh preview
+        except Exception as e:
+            st.error(f"Không thể xử lý ảnh được dán: {e}")
+            st.session_state.pasted_b64_data = None # Xóa dữ liệu lỗi
+
+    # --- PHẦN XỬ LÝ VÀ HIỂN THỊ (GIỮ NGUYÊN) ---
     if st.session_state.image_bytes_to_process and not st.session_state.extracted_list_data:
         st.subheader("Ảnh đã sẵn sàng để xử lý:")
         st.image(st.session_state.image_bytes_to_process, use_column_width=True)
@@ -1556,15 +1568,17 @@ with tab_add_from_image:
                 list_of_extracted_data = extract_booking_info_from_image_content(st.session_state.image_bytes_to_process)
                 st.session_state.extracted_list_data = list_of_extracted_data
             
-            if list_of_extracted_data and not list_of_extracted_data[0].get("errors"):
+            if list_of_extracted_data and not (isinstance(list_of_extracted_data[0], dict) and list_of_extracted_data[0].get("errors")):
                  st.success(f"Hoàn tất! Đã trích xuất được {len(list_of_extracted_data)} đặt phòng. Vui lòng kiểm tra kết quả bên dưới.")
             else:
-                 st.error(f"Không thể trích xuất dữ liệu. Lỗi: {list_of_extracted_data[0].get('errors')}")
+                 error_msg = list_of_extracted_data[0].get("errors", ["Lỗi không xác định."]) if list_of_extracted_data else ["Không có dữ liệu trả về."]
+                 st.error(f"Không thể trích xuất dữ liệu. Lỗi: {error_msg[0]}")
             st.rerun()
 
     if st.session_state.extracted_list_data:
         st.subheader("Kết quả trích xuất")
         
+        # ... (Toàn bộ phần logic hiển thị và thêm DataFrame giữ nguyên như cũ)
         extracted_df = pd.DataFrame(st.session_state.extracted_list_data)
 
         display_cols = [
