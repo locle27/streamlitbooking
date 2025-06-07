@@ -13,3 +13,4 @@ gspread
 google-auth-oauthlib
 google-auth-httplib2
 python-telegram-bot
+pytesseract
