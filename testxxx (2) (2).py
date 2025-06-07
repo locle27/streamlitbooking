@@ -222,7 +222,7 @@ st.markdown("""
     .dataframe { border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
     .loading-spinner { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary-color); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center; font-family: 'Segoe UI', sans-serif; } .day-header { font-weight: bold; padding: 8px 0; background-color: #e9ecef; color: #495057; border-radius: 5px; font-size: 0.9em; } .day-cell { border: 1px solid #dee2e6; padding: 8px 2px; min-height: 75px; display: flex; flex-direction: column; justify-content: space-between; align-items: center; border-radius: 5px; cursor: pointer; transition: background-color 0.2s, box-shadow 0.2s; position: relative; background-color: #fff; } .day-cell:hover { background-color: #f8f9fa; box-shadow: 0 0 5px rgba(0,0,0,0.1); } .day-button-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; z-index: 10; cursor: pointer; } .day-number { font-size: 1.1em; font-weight: bold; margin-bottom: 3px; color: #343a40; } .day-status { font-size: 0.75em; color: #6c757d; padding: 0 2px; word-break: break-word; } .dot-indicator { font-size: 1.8em; line-height: 0.5; margin-top: -2px; margin-bottom: 2px; } .dot-green { color: var(--success-color); } .dot-orange { color: var(--warning-color); } .dot-red { color: var(--danger-color); } .day-disabled { color: #adb5bd; background-color: #f1f3f5; cursor: not-allowed; } .day-today { border: 2px solid var(--primary-color); background-color: #e7f3ff; } .day-selected { background-color: #cfe2ff; border: 2px solid #0a58ca; box-shadow: 0 0 8px rgba(10, 88, 202, 0.3); } .guest-separator { border-bottom: 1px dashed #ced4da; margin: 4px 0; width: 90%; align-self: center; } .calendar-details-expander .streamlit-expanderHeader { font-size: 1.1em; font-weight: bold; } .calendar-details-expander p { margin-bottom: 0.3rem; }
+    .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center; font-family: 'Segoe UI', sans-serif; } .day-header { font-weight: bold; padding: 8px 0; background-color: #e9ecef; color: #495057; border-radius: 5px; font-size: 0.9em; } .day-cell { border: 1px solid #dee2e6; padding: 8px 2px; min-height: 75px; display: flex; flex-direction: column; justify-content: space-between; align-items: center; border-radius: 5px; cursor: pointer; transition: background-color 0.2s, box-shadow 0.2s; position: relative; background-color: #fff; } .day-cell:hover { background-color: #f8f9fa; box-shadow: 0 0 5px rgba(0,0,0,0.1); } .day-button-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; z-index: 10; cursor: pointer; } .day-number { font-size: 1.1em; font-weight: bold; margin-bottom: 3px; color: #343a40; } .day-status { font-size: 0.75em; color: #6c757d; padding: 0 2px; word-break: break-word; } .dot-indicator { font-size: 1.8em; line-height: 0.5; margin-top: -2px; margin-bottom: 2px; } .dot-green { color: var(--success-color); } .dot-orange { color: var(--warning-color); } .dot-red { color: var(--danger-color); } .dot-blue { color: #007bff; } .day-disabled { color: #adb5bd; background-color: #f1f3f5; cursor: not-allowed; } .day-today { border: 2px solid var(--primary-color); background-color: #e7f3ff; } .day-selected { background-color: #cfe2ff; border: 2px solid #0a58ca; box-shadow: 0 0 8px rgba(10, 88, 202, 0.3); } .guest-separator { border-bottom: 1px dashed #ced4da; margin: 4px 0; width: 90%; align-self: center; } .calendar-details-expander .streamlit-expanderHeader { font-size: 1.1em; font-weight: bold; } .calendar-details-expander p { margin-bottom: 0.3rem; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -822,21 +822,22 @@ def get_daily_activity(date_to_check: datetime.date, current_bookings_df: Option
 
 def get_overall_calendar_day_info(date_to_check: datetime.date, current_bookings_df: Optional[pd.DataFrame], hotel_total_capacity: int) -> Dict[str, Any]:
     if current_bookings_df is None or current_bookings_df.empty or hotel_total_capacity == 0:
-        return {'occupied_units': 0, 'available_units': hotel_total_capacity, 'guests': [], 'status_text': f"Trống" if hotel_total_capacity > 0 else "N/A", 'color': '#D4EFDF', 'status_indicator_type': 'green_dot' if hotel_total_capacity > 0 else 'error'}
+        return {'occupied_units': 0, 'available_units': hotel_total_capacity, 'guests': [], 'status_text': f"Trống" if hotel_total_capacity > 0 else "N/A", 'color': '#D4EFDF', 'status_indicator_type': 'green_dot' if hotel_total_capacity > 0 else 'error', 'has_activity': False}
     if isinstance(date_to_check, pd.Timestamp): date_to_check_dt = date_to_check.date()
     elif isinstance(date_to_check, datetime.datetime): date_to_check_dt = date_to_check.date()
     elif isinstance(date_to_check, datetime.date): date_to_check_dt = date_to_check
-    else: return {'occupied_units': 0, 'available_units': 0, 'guests': [], 'status_text': "Lỗi ngày", 'color': '#EAECEE', 'status_indicator_type': 'error'}
+    else: return {'occupied_units': 0, 'available_units': 0, 'guests': [], 'status_text': "Lỗi ngày", 'color': '#EAECEE', 'status_indicator_type': 'error', 'has_activity': False}
     required_date_cols = ['Check-in Date', 'Check-out Date']
     for col in required_date_cols:
         if col not in current_bookings_df.columns or not pd.api.types.is_datetime64_any_dtype(current_bookings_df[col]):
-            st.warning(f"Cột ngày '{col}' bị thiếu hoặc không đúng định dạng."); return {'occupied_units': 0, 'available_units': hotel_total_capacity, 'guests': [], 'status_text': "Lỗi dữ liệu", 'color': '#EAECEE', 'status_indicator_type': 'error'}
+            st.warning(f"Cột ngày '{col}' bị thiếu hoặc không đúng định dạng."); return {'occupied_units': 0, 'available_units': hotel_total_capacity, 'guests': [], 'status_text': "Lỗi dữ liệu", 'color': '#EAECEE', 'status_indicator_type': 'error', 'has_activity': False}
     active_on_date_df = current_bookings_df[
         (current_bookings_df['Check-in Date'].dt.date <= date_to_check_dt) &
         (current_bookings_df['Check-out Date'].dt.date > date_to_check_dt) &
         (current_bookings_df['Tình trạng'] != 'Đã hủy')
     ]
     occupied_units = len(active_on_date_df)
+    has_activity = occupied_units > 0
     available_units = max(0, hotel_total_capacity - occupied_units)
     guests_staying_today = active_on_date_df['Tên người đặt'].unique().tolist() if 'Tên người đặt' in active_on_date_df else []
     status_text = ""; color_indicator = ""; status_indicator_type = ""
@@ -844,8 +845,48 @@ def get_overall_calendar_day_info(date_to_check: datetime.date, current_bookings
     elif available_units > 0: status_text = f"{available_units}/{hotel_total_capacity} trống"; status_indicator_type = "green_dot"
     elif hotel_total_capacity > 0 : status_text = f"Hết phòng"; status_indicator_type = "orange_dash"
     else: status_text = "N/A"; status_indicator_type = "error"
-    return {'occupied_units': occupied_units, 'available_units': available_units, 'guests': guests_staying_today, 'status_text': status_text, 'color': color_indicator, 'status_indicator_type': status_indicator_type}
+    return {'occupied_units': occupied_units, 'available_units': available_units, 'guests': guests_staying_today, 'status_text': status_text, 'color': color_indicator, 'status_indicator_type': status_indicator_type, 'has_activity': has_activity}
 
+def get_detailed_daily_activity_by_property(date_to_check: datetime.date, current_bookings_df: Optional[pd.DataFrame]) -> Dict[str, Dict[str, List[Dict]]]:
+    """
+    Gathers daily activity (check-ins, stay-overs, check-outs) and groups it by property name.
+    """
+    activity_by_property: Dict[str, Dict[str, List[Dict]]] = {}
+    if current_bookings_df is None or current_bookings_df.empty:
+        return activity_by_property
+
+    if isinstance(date_to_check, pd.Timestamp): date_to_check_dt = date_to_check.date()
+    elif isinstance(date_to_check, datetime.datetime): date_to_check_dt = date_to_check.date()
+    elif isinstance(date_to_check, datetime.date): date_to_check_dt = date_to_check
+    else: return activity_by_property
+    
+    active_bookings_df = current_bookings_df[current_bookings_df['Tình trạng'] != 'Đã hủy'].copy()
+    if active_bookings_df.empty: return activity_by_property
+    
+    active_bookings_df['check_in_date_only'] = pd.to_datetime(active_bookings_df['Check-in Date']).dt.date
+    active_bookings_df['check_out_date_only'] = pd.to_datetime(active_bookings_df['Check-out Date']).dt.date
+
+    # Get activities
+    check_ins_df = active_bookings_df[active_bookings_df['check_in_date_only'] == date_to_check_dt]
+    check_outs_df = active_bookings_df[active_bookings_df['check_out_date_only'] == date_to_check_dt]
+    stay_overs_df = active_bookings_df[
+        (active_bookings_df['check_in_date_only'] < date_to_check_dt) &
+        (active_bookings_df['check_out_date_only'] > date_to_check_dt)
+    ]
+    
+    # Helper to populate the main dict
+    def process_bookings(df: pd.DataFrame, category: str):
+        for _, booking in df.iterrows():
+            property_name = booking.get('Tên chỗ nghỉ', 'N/A')
+            if property_name not in activity_by_property:
+                activity_by_property[property_name] = {'check_ins': [], 'stay_overs': [], 'check_outs': []}
+            activity_by_property[property_name][category].append(booking.to_dict())
+
+    process_bookings(check_ins_df, 'check_ins')
+    process_bookings(stay_overs_df, 'stay_overs')
+    process_bookings(check_outs_df, 'check_outs')
+    
+    return activity_by_property
 
 # --- MẪU TIN NHẮN VÀ HÀM XỬ LÝ ---
 DEFAULT_MESSAGE_TEMPLATE_CONTENT = """
@@ -1127,7 +1168,7 @@ max_date_val = (df['Check-out Date'].max().date() if df is not None and not df.e
 
 
 # --- CÁC TAB CHỨC NĂNG ---
-tab_titles = ["📊 Dashboard", "📅 Lịch phòng", "📋 Quản lý đặt phòng", "📈 Phân tích", "➕ Thêm đặt phòng", "📝 Xử lý HTML & Nối dữ liệu", "💌 Mẫu tin nhắn"]
+tab_titles = ["📊 Dashboard", "📅 Bookings", "📋 Quản lý đặt phòng", "📈 Phân tích", "➕ Thêm đặt phòng", "📝 Xử lý HTML & Nối dữ liệu", "💌 Mẫu tin nhắn"]
 tab_dashboard, tab_calendar, tab_booking_mgmt, tab_analytics, tab_add_booking, tab_html_processing, tab_message_templates = st.tabs(tab_titles)
 
 # --- TAB DASHBOARD ---
@@ -1259,7 +1300,7 @@ with tab_dashboard:
 
 # --- TAB LỊCH PHÒNG ---
 with tab_calendar:
-    st.header(" Lịch phòng tổng quan")
+    st.header(" Bookings")
     st.subheader("Tổng quan phòng trống")
     if active_bookings is not None:
         today_date = datetime.date.today(); tomorrow_date = today_date + timedelta(days=1)
@@ -1307,14 +1348,13 @@ with tab_calendar:
                     else:
                         current_day_date_cal = datetime.date(current_year, current_month, day_num_cal)
                         day_info_cal = get_overall_calendar_day_info(current_day_date_cal, active_bookings, TOTAL_HOTEL_CAPACITY)
-                        status_indicator_html = ""
-                        if day_info_cal['status_indicator_type'] == "green_dot": status_indicator_html = "<div class='dot-indicator dot-green'>•</div>"
-                        elif day_info_cal['status_indicator_type'] == "orange_dash": status_indicator_html = "<div class='dot-indicator dot-orange'>—</div>"
-                        elif day_info_cal['status_indicator_type'] == "red_x": status_indicator_html = "<div class='dot-indicator dot-red'>✕</div>"
+                        
+                        dot_html = "<div class='dot-indicator dot-blue'>•</div>" if day_info_cal.get('has_activity', False) else ""
+
                         day_class = "day-cell"
                         if current_day_date_cal == datetime.date.today(): day_class += " day-today"
                         if st.session_state.selected_calendar_date == current_day_date_cal: day_class += " day-selected"
-                        st.markdown(f"""<div class='{day_class}'><div class='day-number'>{day_num_cal}</div>{status_indicator_html}<div class='day-status'>{day_info_cal['status_text']}</div></div>""", unsafe_allow_html=True)
+                        st.markdown(f"""<div class='{day_class}'><div class='day-number'>{day_num_cal}</div>{dot_html}<div class='day-status'>{day_info_cal['status_text']}</div></div>""", unsafe_allow_html=True)
                         button_key_calendar = f"day_button_overlay_{current_day_date_cal.strftime('%Y%m%d')}"
                         if st.button("", key=button_key_calendar, help=f"Xem chi tiết ngày {current_day_date_cal.strftime('%d/%m/%Y')}"):
                             st.session_state.selected_calendar_date = None if st.session_state.selected_calendar_date == current_day_date_cal else current_day_date_cal
@@ -1325,36 +1365,57 @@ with tab_calendar:
     if st.session_state.selected_calendar_date is not None:
         selected_date_cal = st.session_state.selected_calendar_date
         st.markdown("---")
-        with st.expander(f"🗓️ Chi tiết hoạt động ngày: {selected_date_cal.strftime('%A, %d/%m/%Y')}", expanded=True):
-            daily_activity_cal = get_daily_activity(selected_date_cal, active_bookings)
-            col_checkin_cal, col_checkout_cal, col_occupied_cal = st.columns(3)
-            with col_checkin_cal:
-                st.markdown("##### 🛬 Khách Check-in")
-                if daily_activity_cal['check_in']:
-                    st.success(f"**{len(daily_activity_cal['check_in'])}** lượt check-in:")
-                    for guest in daily_activity_cal['check_in']: st.markdown(f"- **{guest.get('name','N/A')}** ({guest.get('room_type','N/A')})"); st.caption(f"  Mã ĐP: {guest.get('booking_id','N/A')}")
-                else: st.info("Không có khách check-in.")
-            with col_checkout_cal:
-                st.markdown("##### 🛫 Khách Check-out")
-                if daily_activity_cal['check_out']:
-                    st.warning(f"**{len(daily_activity_cal['check_out'])}** lượt check-out:")
-                    for guest in daily_activity_cal['check_out']: st.markdown(f"- **{guest.get('name','N/A')}** ({guest.get('room_type','N/A')})"); st.caption(f"  Mã ĐP: {guest.get('booking_id','N/A')}")
-                else: st.info("Không có khách check-out.")
-            with col_occupied_cal:
-                st.markdown("##### 🏨 Khách đang ở")
-                if daily_activity_cal['occupied']:
-                    st.info(f"**{len(daily_activity_cal['occupied'])}** lượt khách ở:")
-                    for guest in daily_activity_cal['occupied']:
-                        check_in_str = guest['check_in'].strftime('%d/%m') if guest['check_in'] else 'N/A'
-                        check_out_str = guest['check_out'].strftime('%d/%m') if guest['check_out'] else 'N/A'
-                        total_payment_val = guest.get('total_payment', 0.0)
-                        total_payment_str = f"{total_payment_val:,.0f}" if pd.notna(total_payment_val) and total_payment_val != 0.0 else "0"
-                        st.markdown(f"- **{guest.get('name','N/A')}** ({guest.get('room_type','N/A')})")
-                        st.caption(f"  Từ {check_in_str} đến {check_out_str} (Mã ĐP: {guest.get('booking_id','N/A')}) - Tổng tiền: {total_payment_str}")
-                        st.markdown("<div class='guest-separator'></div>", unsafe_allow_html=True)
-                else: st.info("Không có khách đang ở.")
-            if st.button("Ẩn chi tiết ngày", key="hide_day_details_calendar", type="primary"):
-                st.session_state.selected_calendar_date = None; st.rerun()
+
+        activity_by_property = get_detailed_daily_activity_by_property(selected_date_cal, active_bookings)
+
+        if not any(v for d in activity_by_property.values() for v in d.values()):
+            st.info(f"Không có hoạt động nào vào ngày {selected_date_cal.strftime('%d/%m/%Y')}.")
+        else:
+            st.markdown(f"##### Hoạt động ngày: {selected_date_cal.strftime('%d %B, %Y')}")
+            for property_name, activities in sorted(activity_by_property.items()):
+                if any(activities.values()):
+                    with st.container():
+                        st.markdown(f"**{property_name}**")
+                        
+                        sub_cols = st.columns(3)
+                        sub_cols[0].markdown(f"Check-ins<br>**{len(activities['check_ins'])}**", unsafe_allow_html=True)
+                        sub_cols[1].markdown(f"Stay-overs<br>**{len(activities['stay_overs'])}**", unsafe_allow_html=True)
+                        sub_cols[2].markdown(f"Check-outs<br>**{len(activities['check_outs'])}**", unsafe_allow_html=True)
+                        
+                        st.markdown("<hr style='margin-top: 5px; margin-bottom: 5px; border-style: dashed;'>", unsafe_allow_html=True)
+
+                        if activities['check_ins']:
+                            for booking in activities['check_ins']:
+                                ci_date = pd.to_datetime(booking.get('Check-in Date')).date()
+                                co_date = pd.to_datetime(booking.get('Check-out Date')).date()
+                                nights = (co_date - ci_date).days
+                                st.markdown("`➡️ Check-in`")
+                                st.markdown(f"**{booking.get('Tên người đặt', 'N/A')}**")
+                                st.caption(f"🗓️ {ci_date.strftime('%b %d')} - {co_date.strftime('%b %d, %Y')} | 🌙 {nights} nights")
+                        
+                        if activities['stay_overs']:
+                            for booking in activities['stay_overs']:
+                                ci_date = pd.to_datetime(booking.get('Check-in Date')).date()
+                                co_date = pd.to_datetime(booking.get('Check-out Date')).date()
+                                nights = (co_date - ci_date).days
+                                st.markdown("`🛏️ Stay-over`")
+                                st.markdown(f"**{booking.get('Tên người đặt', 'N/A')}**")
+                                st.caption(f"🗓️ {ci_date.strftime('%b %d')} - {co_date.strftime('%b %d, %Y')} | 🌙 {nights} nights")
+
+                        if activities['check_outs']:
+                            for booking in activities['check_outs']:
+                                ci_date = pd.to_datetime(booking.get('Check-in Date')).date()
+                                co_date = pd.to_datetime(booking.get('Check-out Date')).date()
+                                nights = (co_date - ci_date).days
+                                st.markdown("`⬅️ Check-out`")
+                                st.markdown(f"**{booking.get('Tên người đặt', 'N/A')}**")
+                                st.caption(f"🗓️ {ci_date.strftime('%b %d')} - {co_date.strftime('%b %d, %Y')} | 🌙 {nights} nights")
+                    
+                    st.markdown("<br>", unsafe_allow_html=True)
+
+        if st.button("Ẩn chi tiết ngày", key="hide_day_details_calendar_new"):
+            st.session_state.selected_calendar_date = None
+            st.rerun()
 
 # --- TAB QUẢN LÝ ĐẶT PHÒNG ---
 with tab_booking_mgmt:
