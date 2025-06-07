@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Streamlit Paste Image Component</title>
+  <script src="https://cdn.jsdelivr.net/npm/streamlit-component-lib@2.1.0/dist/streamlit-component-lib.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    #paste-area {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 150px;
+      border: 2px dashed #ccc;
+      border-radius: 10px;
+      text-align: center;
+      color: #888;
+      background-color: #f9f9f9;
+      transition: background-color 0.2s, border-color 0.2s;
+    }
+    #paste-area:hover {
+      background-color: #f0f8ff;
+      border-color: #1f77b4;
+    }
+  </style>
+</head>
+<body>
+  <div id="paste-area">
+    <div>
+      <p>📸</p>
+      <p><strong>Dán ảnh chụp màn hình vào đây (Ctrl+V)</strong></p>
+    </div>
+  </div>
+
+  <script>
+    // Hàm gửi dữ liệu về Python
+    function sendValue(value) {
+      Streamlit.setComponentValue(value);
+    }
+
+    // Lắng nghe sự kiện 'paste' trên toàn bộ trang
+    document.addEventListener('paste', function (event) {
+      // Lấy dữ liệu từ clipboard
+      const items = (event.clipboardData || event.originalEvent.clipboardData).items;
+      for (let index in items) {
+        const item = items[index];
+        // Chỉ xử lý nếu là hình ảnh
+        if (item.kind === 'file' && item.type.indexOf('image') !== -1) {
+          const file = item.getAsFile();
+          const reader = new FileReader();
+          
+          // Khi đọc file xong, chuyển đổi sang Base64 và gửi đi
+          reader.onload = function (event) {
+            const base64Image = event.target.result;
+            sendValue(base64Image);
+          };
+          
+          reader.readAsDataURL(file);
+        }
+      }
+    });
+
+    // Báo cho Streamlit biết component đã sẵn sàng
+    Streamlit.setFrameHeight();
+  </script>
+</body>
+</html> 

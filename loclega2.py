@@ -1493,39 +1493,76 @@ with tab_booking_mgmt:
                 st.success(st.session_state.last_action_message)
                 st.session_state.last_action_message = None
 
-# --- TAB THÊM TỪ ẢNH ---
+# --- TAB THÊM TỪ ẢNH (Đã nâng cấp) ---
 with tab_add_from_image:
-    st.header("📸 Thêm Đặt Phòng từ Ảnh (Hỗ trợ nhiều khách)")
+    st.header("📸 Thêm Đặt Phòng từ Ảnh")
     st.info(
-        "Tải lên một file ảnh (.png, .jpg) chứa danh sách nhiều đặt phòng. "
-        "Hệ thống sẽ trích xuất thông tin từ tất cả các hàng trong ảnh và hiển thị kết quả để bạn xác nhận trước khi thêm vào dữ liệu chính."
+        "Sử dụng một trong hai cách:\n"
+        "1. **Tải lên file ảnh** (.png, .jpg) chứa danh sách đặt phòng.\n"
+        "2. **Dán ảnh chụp màn hình** trực tiếp vào khung bên dưới (Ctrl+V)."
     )
 
+    # Khởi tạo session state nếu chưa có
+    if 'image_bytes_to_process' not in st.session_state:
+        st.session_state.image_bytes_to_process = None
     if 'extracted_list_data' not in st.session_state:
         st.session_state.extracted_list_data = None
 
-    uploaded_image_file = st.file_uploader(
-        "Tải lên file ảnh chứa danh sách đặt phòng",
-        type=["png", "jpg", "jpeg"],
-        key="image_booking_list_uploader"
-    )
+    # --- PHẦN NHẬP LIỆU ---
+    col1, col2 = st.columns(2)
 
-    if uploaded_image_file:
-        st.markdown("---")
-        st.subheader("Ảnh đã tải lên:")
-        st.image(uploaded_image_file, use_column_width=True)
+    with col1:
+        st.subheader("Cách 1: Tải lên tệp")
+        uploaded_image_file = st.file_uploader(
+            "Chọn một file ảnh",
+            type=["png", "jpg", "jpeg"],
+            key="image_booking_list_uploader"
+        )
+        if uploaded_image_file:
+            # Nếu có file mới, lưu nó vào session state để xử lý
+            st.session_state.image_bytes_to_process = uploaded_image_file.getvalue()
+            st.session_state.extracted_list_data = None # Xóa kết quả cũ
+            st.rerun()
+
+    with col2:
+        st.subheader("Cách 2: Dán ảnh")
+        # Đọc nội dung của component HTML
+        with open("components/paste_image.html", "r", encoding="utf-8") as f:
+            html_code = f.read()
+        
+        # Gọi component và nhận giá trị trả về (chuỗi Base64)
+        pasted_image_b64 = components.html(html_code, height=170)
+
+        if pasted_image_b64:
+            try:
+                # Tách phần header của Base64 (ví dụ: "data:image/png;base64,")
+                image_data = pasted_image_b64.split(",")[1]
+                # Giải mã Base64 thành bytes
+                st.session_state.image_bytes_to_process = base64.b64decode(image_data)
+                st.session_state.extracted_list_data = None # Xóa kết quả cũ
+                st.rerun()
+            except Exception as e:
+                st.error(f"Không thể xử lý ảnh được dán: {e}")
+
+    st.markdown("---")
+
+    # --- PHẦN XỬ LÝ VÀ HIỂN THỊ ---
+    if st.session_state.image_bytes_to_process and not st.session_state.extracted_list_data:
+        st.subheader("Ảnh đã sẵn sàng để xử lý:")
+        st.image(st.session_state.image_bytes_to_process, use_column_width=True)
 
         if st.button("🔍 Trích xuất thông tin từ ảnh này", type="primary"):
             with st.spinner("Đang phân tích ảnh và trích xuất danh sách đặt phòng..."):
-                image_bytes = uploaded_image_file.getvalue()
-                list_of_extracted_data = extract_booking_info_from_image_content(image_bytes)
+                list_of_extracted_data = extract_booking_info_from_image_content(st.session_state.image_bytes_to_process)
                 st.session_state.extracted_list_data = list_of_extracted_data
             
-            st.success(f"Hoàn tất! Đã trích xuất được {len(list_of_extracted_data)} đặt phòng. Vui lòng kiểm tra kết quả bên dưới.")
+            if list_of_extracted_data and not list_of_extracted_data[0].get("errors"):
+                 st.success(f"Hoàn tất! Đã trích xuất được {len(list_of_extracted_data)} đặt phòng. Vui lòng kiểm tra kết quả bên dưới.")
+            else:
+                 st.error(f"Không thể trích xuất dữ liệu. Lỗi: {list_of_extracted_data[0].get('errors')}")
             st.rerun()
 
     if st.session_state.extracted_list_data:
-        st.markdown("---")
         st.subheader("Kết quả trích xuất")
         
         extracted_df = pd.DataFrame(st.session_state.extracted_list_data)
@@ -1595,10 +1632,12 @@ with tab_add_from_image:
                 
                 st.session_state.last_action_message = f"✅ Hoàn tất! Đã thêm {added_count} đặt phòng mới. Bỏ qua {skipped_count} đặt phòng (do lỗi hoặc trùng lặp)."
                 st.session_state.extracted_list_data = None
+                st.session_state.image_bytes_to_process = None
                 st.rerun()
 
         if st.button("Hủy và xóa kết quả", key="clear_image_list_results"):
             st.session_state.extracted_list_data = None
+            st.session_state.image_bytes_to_process = None
             st.rerun()
 
 # --- TAB THÊM ĐẶT PHÒNG MỚI ---
