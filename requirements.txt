@@ -7,11 +7,9 @@ xlrd
 PyPDF2
 beautifulsoup4
 Pillow
-pytesseract
 python-dateutil
 google-generativeai
-toml
 gspread
 google-auth-oauthlib
-google-api-python-client
-python-telegram-bot 
+google-auth-httplib2
+python-telegram-bot
