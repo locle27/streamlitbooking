@@ -249,12 +249,17 @@ def get_cleaned_room_types(df_source: Optional[pd.DataFrame]) -> List[str]:
             seen_types.add(s_val)
     return sorted(cleaned_types)
 
-def import_from_gsheet(sheet_id, creds_path, worksheet_name=None):
+# --- SỬA LỖI: Sử dụng credentials từ st.secrets thay vì đường dẫn tệp ---
+def import_from_gsheet(sheet_id, gcp_creds_dict, worksheet_name=None):
+    """
+    Imports data from a Google Sheet using service account credentials
+    provided as a dictionary (from st.secrets).
+    """
     scope = [
         'https://www.googleapis.com/auth/spreadsheets',
         'https://www.googleapis.com/auth/drive',
     ]
-    creds = Credentials.from_service_account_file(creds_path, scopes=scope)
+    creds = Credentials.from_service_account_info(gcp_creds_dict, scopes=scope)
     gc = gspread.authorize(creds)
     sh = gc.open_by_key(sheet_id)
     if worksheet_name:
@@ -267,12 +272,17 @@ def import_from_gsheet(sheet_id, creds_path, worksheet_name=None):
     df = pd.DataFrame(data[1:], columns=data[0])
     return df
 
-def upload_to_gsheet(df, sheet_id, creds_path, worksheet_name=None):
+# --- SỬA LỖI: Sử dụng credentials từ st.secrets thay vì đường dẫn tệp ---
+def upload_to_gsheet(df, sheet_id, gcp_creds_dict, worksheet_name=None):
+    """
+    Uploads a DataFrame to a Google Sheet using service account credentials
+    provided as a dictionary (from st.secrets).
+    """
     scope = [
         'https://www.googleapis.com/auth/spreadsheets',
         'https://www.googleapis.com/auth/drive',
     ]
-    creds = Credentials.from_service_account_file(creds_path, scopes=scope)
+    creds = Credentials.from_service_account_info(gcp_creds_dict, scopes=scope)
     gc = gspread.authorize(creds)
     sh = gc.open_by_key(sheet_id)
     if worksheet_name:
@@ -1120,10 +1130,10 @@ if uploaded_file is not None:
             st.session_state.uploaded_file_name = uploaded_file.name
 elif st.session_state.df is None and st.session_state.data_source != 'error_loading_file':
     st.sidebar.info("Đang tải dữ liệu mặc định từ Google Sheets...")
-    creds_path = "streamlit-api-461302-5dfbcb4beaba.json"
+    creds_dict = st.secrets["gcp_service_account"]
     default_sheet_id = "13kQETOUGCVUwUqZrxeLy-WAj3b17SugI4L8Oq09SX2w"
     worksheet_name = "BookingManager"
-    df_gsheet = import_from_gsheet(default_sheet_id, creds_path, worksheet_name)
+    df_gsheet = import_from_gsheet(default_sheet_id, creds_dict, worksheet_name)
     if df_gsheet is not None and not df_gsheet.empty:
         st.session_state.df = df_gsheet
         st.session_state.active_bookings = df_gsheet[df_gsheet['Tình trạng'] != 'Đã hủy'].copy() if 'Tình trạng' in df_gsheet.columns else df_gsheet.copy()
@@ -1887,6 +1897,7 @@ with tab_message_templates:
     creds_path_msg = "streamlit-api-461302-5dfbcb4beaba.json"
     sheet_id_msg = st.session_state.get("gsheet_id", "13kQETOUGCVUwUqZrxeLy-WAj3b17SugI4L8Oq09SX2w")
     worksheet_name_msg = "MessageTemplate"
+    creds_dict_msg = st.secrets["gcp_service_account"]
 
     col_gsheet1, col_gsheet2 = st.columns(2)
 
@@ -1894,7 +1905,7 @@ with tab_message_templates:
         if st.button("📥 Tải mẫu từ Google Sheets", key="load_templates_from_gsheet_v3", use_container_width=True):
             try:
                 with st.spinner(f"Đang tải mẫu từ Google Sheet '{worksheet_name_msg}'..."):
-                    df_templates = import_from_gsheet(sheet_id_msg, creds_path_msg, worksheet_name_msg)
+                    df_templates = import_from_gsheet(sheet_id_msg, creds_dict_msg, worksheet_name_msg)
                     
                     if df_templates is not None and not df_templates.empty and all(c in df_templates.columns for c in ['Category', 'Label', 'Message']):
                         templates = {}
@@ -1933,7 +1944,7 @@ with tab_message_templates:
 
                         if template_list_for_df:
                             df_to_upload = pd.DataFrame(template_list_for_df)
-                            upload_to_gsheet(df_to_upload, sheet_id_msg, creds_path_msg, worksheet_name_msg)
+                            upload_to_gsheet(df_to_upload, sheet_id_msg, creds_dict_msg, worksheet_name_msg)
                             st.success("Đã lưu thành công tất cả mẫu tin nhắn lên Google Sheets!")
                         else:
                             st.warning("Không có mẫu tin nhắn để lưu.")
