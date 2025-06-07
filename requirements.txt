@@ -6,7 +6,12 @@ openpyxl
 xlrd
 PyPDF2
 beautifulsoup4
+Pillow
+pytesseract
+python-dateutil
+google-generativeai
+toml
 gspread
-google-auth
 google-auth-oauthlib
-python-telegram-bot
+google-api-python-client
+python-telegram-bot 
