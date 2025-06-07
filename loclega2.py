@@ -250,7 +250,7 @@ def get_cleaned_room_types(df_source: Optional[pd.DataFrame]) -> List[str]:
     return sorted(cleaned_types)
 
 # --- SỬA LỖI: Sử dụng credentials từ st.secrets thay vì đường dẫn tệp ---
-def import_from_gsheet(sheet_id, gcp_creds_dict, worksheet_name=None):
+def import_from_gsheet(sheet_id: str, gcp_creds_dict: dict, worksheet_name: Optional[str] = None) -> pd.DataFrame:
     """
     Imports data from a Google Sheet using service account credentials
     provided as a dictionary (from st.secrets).
@@ -261,16 +261,42 @@ def import_from_gsheet(sheet_id, gcp_creds_dict, worksheet_name=None):
     ]
     creds = Credentials.from_service_account_info(gcp_creds_dict, scopes=scope)
     gc = gspread.authorize(creds)
-    sh = gc.open_by_key(sheet_id)
-    if worksheet_name:
-        worksheet = sh.worksheet(worksheet_name)
-    else:
-        worksheet = sh.sheet1
-    data = worksheet.get_all_values()
-    if not data or len(data) < 2:
+    try:
+        sh = gc.open_by_key(sheet_id)
+        if worksheet_name:
+            worksheet = sh.worksheet(worksheet_name)
+        else:
+            worksheet = sh.sheet1
+        data = worksheet.get_all_values()
+        if not data or len(data) < 2:
+            return pd.DataFrame()
+        df = pd.DataFrame(data[1:], columns=data[0])
+        # Chuyển đổi kiểu dữ liệu sau khi tải
+        for col_num_common in ["Tổng thanh toán", "Hoa hồng"]:
+            if col_num_common in df.columns:
+                 df[col_num_common] = df[col_num_common].apply(clean_currency_value)
+        cols_to_datetime = ['Check-in Date', 'Check-out Date', 'Booking Date']
+        for col_dt in cols_to_datetime:
+            if col_dt in df.columns:
+                df[col_dt] = pd.to_datetime(df[col_dt], errors='coerce')
+
+        if 'Stay Duration' not in df.columns and 'Check-in Date' in df.columns and 'Check-out Date' in df.columns:
+             df['Stay Duration'] = (df['Check-out Date'] - df['Check-in Date']).dt.days
+             df['Stay Duration'] = df['Stay Duration'].apply(lambda x: max(0, x) if pd.notna(x) else 0)
+        if 'Giá mỗi đêm' not in df.columns and 'Tổng thanh toán' in df.columns and 'Stay Duration' in df.columns:
+            df['Tổng thanh toán'] = pd.to_numeric(df['Tổng thanh toán'], errors='coerce').fillna(0)
+            df['Giá mỗi đêm'] = np.where(
+                (df['Stay Duration'].notna()) & (df['Stay Duration'] > 0) & (df['Tổng thanh toán'].notna()),
+                df['Tổng thanh toán'] / df['Stay Duration'],
+                0.0
+            ).round(0)
+        return df
+    except gspread.exceptions.SpreadsheetNotFound:
+        st.error(f"Lỗi: Không tìm thấy Google Sheet với ID '{sheet_id}'. Vui lòng kiểm tra lại ID.")
         return pd.DataFrame()
-    df = pd.DataFrame(data[1:], columns=data[0])
-    return df
+    except Exception as e:
+        st.error(f"Lỗi không xác định khi tải từ Google Sheet: {e}")
+        return pd.DataFrame()
 
 # --- SỬA LỖI: Sử dụng credentials từ st.secrets thay vì đường dẫn tệp ---
 def upload_to_gsheet(df, sheet_id, gcp_creds_dict, worksheet_name=None):
@@ -682,6 +708,7 @@ def load_data_from_file(uploaded_file_obj) -> Tuple[Optional[pd.DataFrame], Opti
     except openpyxl.utils.exceptions.InvalidFileException: st.error(f"Lỗi khi đọc file Excel (.xlsx): {filename}."); return None, None
     except Exception as e: st.error(f"Lỗi nghiêm trọng xảy ra khi xử lý file {filename}: {e}"); import traceback; st.error(f"Chi tiết lỗi: {traceback.format_exc()}"); return None, None
 
+@st.cache_data(ttl=600) # Cache dữ liệu trong 10 phút (600 giây)
 def create_demo_data() -> Tuple[pd.DataFrame, pd.DataFrame]:
     st.info("Đang tạo dữ liệu demo...")
     demo_data = {
@@ -1493,7 +1520,7 @@ with tab_booking_mgmt:
                 st.success(st.session_state.last_action_message)
                 st.session_state.last_action_message = None
 
-# --- TAB THÊM TỪ ẢNH (Đã sửa lỗi và nâng cấp) ---
+# --- TAB THÊM TỪ ẢNH (PHIÊN BẢN ỔN ĐỊNH VÀ TỐI ƯU) ---
 with tab_add_from_image:
     st.header("📸 Thêm Đặt Phòng từ Ảnh")
     st.info(
@@ -1502,14 +1529,13 @@ with tab_add_from_image:
         "2. **Dán ảnh chụp màn hình** trực tiếp vào khung bên dưới (Ctrl+V)."
     )
 
-    # --- KHỞI TẠO CÁC BIẾN SESSION STATE CẦN THIẾT ---
+    # Khởi tạo các biến session state cần thiết
     if 'image_bytes_to_process' not in st.session_state:
         st.session_state.image_bytes_to_process = None
     if 'extracted_list_data' not in st.session_state:
         st.session_state.extracted_list_data = None
-    # THAY ĐỔI 1: Thêm state để lưu trữ dữ liệu thô từ component
-    if 'pasted_b64_data' not in st.session_state:
-        st.session_state.pasted_b64_data = None
+    if 'pasted_component_value' not in st.session_state:
+        st.session_state.pasted_component_value = None
 
     # --- PHẦN NHẬP LIỆU ---
     col1, col2 = st.columns(2)
@@ -1522,137 +1548,139 @@ with tab_add_from_image:
             key="image_booking_list_uploader"
         )
         if uploaded_image_file:
+            # Khi có file mới, cập nhật state và xóa các state khác
             st.session_state.image_bytes_to_process = uploaded_image_file.getvalue()
             st.session_state.extracted_list_data = None
-            st.session_state.pasted_b64_data = None # Xóa dữ liệu dán cũ
+            st.session_state.pasted_component_value = None
             st.rerun()
 
     with col2:
         st.subheader("Cách 2: Dán ảnh")
-        with open("components/paste_image.html", "r", encoding="utf-8") as f:
-            html_code = f.read()
-        
-        component_return_value = components.html(html_code, height=170)
+        # Kiểm tra xem tệp component có tồn tại không
+        component_path = "components/paste_image.html"
+        if os.path.exists(component_path):
+            with open(component_path, "r", encoding="utf-8") as f:
+                html_code = f.read()
+            
+            pasted_b64 = components.html(html_code, height=170)
 
-        # THAY ĐỔI 2: Logic nhận dữ liệu mới - Chỉ lưu và rerun
-        if component_return_value and component_return_value != st.session_state.pasted_b64_data:
-            # Chỉ lưu dữ liệu vào state và rerun, không xử lý ngay
-            st.session_state.pasted_b64_data = component_return_value
-            st.session_state.extracted_list_data = None
-            st.session_state.image_bytes_to_process = None # Xóa dữ liệu tải lên cũ
-            st.rerun()
+            # Logic mới để phá vỡ vòng lặp
+            if pasted_b64 and pasted_b64 != st.session_state.get('pasted_component_value'):
+                # 1. Lưu giá trị mới từ component
+                st.session_state.pasted_component_value = pasted_b64
+                # 2. Xử lý ngay lập tức
+                try:
+                    image_data = pasted_b64.split(",")[1]
+                    st.session_state.image_bytes_to_process = base64.b64decode(image_data)
+                    st.session_state.extracted_list_data = None
+                except Exception as e:
+                    st.error(f"Không thể xử lý ảnh được dán: {e}")
+                    st.session_state.image_bytes_to_process = None
+                # 3. Rerun để giao diện cập nhật
+                st.rerun()
+        else:
+            st.warning("Không tìm thấy component dán ảnh. Chức năng dán có thể không hoạt động.")
+
 
     st.markdown("---")
 
-    # --- PHẦN XỬ LÝ DỮ LIỆU DÁN (CHẠY Ở LẦN RERUN THỨ 2) ---
-    # THAY ĐỔI 3: Tách riêng khối xử lý dữ liệu dán
-    if st.session_state.pasted_b64_data and st.session_state.image_bytes_to_process is None:
-        try:
-            # Bây giờ xử lý dữ liệu từ session_state một cách an toàn
-            image_data = st.session_state.pasted_b64_data.split(",")[1]
-            st.session_state.image_bytes_to_process = base64.b64decode(image_data)
-            # Xóa dữ liệu thô sau khi đã xử lý để tránh lặp lại
-            st.session_state.pasted_b64_data = None
-            st.rerun() # Rerun một lần nữa để hiển thị ảnh preview
-        except Exception as e:
-            st.error(f"Không thể xử lý ảnh được dán: {e}")
-            st.session_state.pasted_b64_data = None # Xóa dữ liệu lỗi
+    # --- PHẦN XỬ LÝ VÀ HIỂN THỊ ---
+    # Khối này bây giờ chỉ chịu trách nhiệm hiển thị và chờ nút bấm
+    if st.session_state.image_bytes_to_process:
+        if not st.session_state.extracted_list_data:
+            st.subheader("Ảnh đã sẵn sàng để xử lý:")
+            st.image(st.session_state.image_bytes_to_process, use_column_width=True)
 
-    # --- PHẦN XỬ LÝ VÀ HIỂN THỊ (GIỮ NGUYÊN) ---
-    if st.session_state.image_bytes_to_process and not st.session_state.extracted_list_data:
-        st.subheader("Ảnh đã sẵn sàng để xử lý:")
-        st.image(st.session_state.image_bytes_to_process, use_column_width=True)
-
-        if st.button("🔍 Trích xuất thông tin từ ảnh này", type="primary"):
-            with st.spinner("Đang phân tích ảnh và trích xuất danh sách đặt phòng..."):
-                list_of_extracted_data = extract_booking_info_from_image_content(st.session_state.image_bytes_to_process)
-                st.session_state.extracted_list_data = list_of_extracted_data
-            
-            if list_of_extracted_data and not (isinstance(list_of_extracted_data[0], dict) and list_of_extracted_data[0].get("errors")):
-                 st.success(f"Hoàn tất! Đã trích xuất được {len(list_of_extracted_data)} đặt phòng. Vui lòng kiểm tra kết quả bên dưới.")
-            else:
-                 error_msg = list_of_extracted_data[0].get("errors", ["Lỗi không xác định."]) if list_of_extracted_data else ["Không có dữ liệu trả về."]
-                 st.error(f"Không thể trích xuất dữ liệu. Lỗi: {error_msg[0]}")
-            st.rerun()
-
-    if st.session_state.extracted_list_data:
-        st.subheader("Kết quả trích xuất")
-        
-        # ... (Toàn bộ phần logic hiển thị và thêm DataFrame giữ nguyên như cũ)
-        extracted_df = pd.DataFrame(st.session_state.extracted_list_data)
-
-        display_cols = [
-            'guest_name', 'check_in_date', 'check_out_date', 'room_type', 
-            'total_payment', 'commission', 'booking_id', 'errors'
-        ]
-        existing_display_cols = [col for col in display_cols if col in extracted_df.columns]
-        
-        st.dataframe(extracted_df[existing_display_cols])
-
-        if st.button("➕ Thêm tất cả các đặt phòng hợp lệ vào hệ thống", key="add_all_from_image_list"):
-            if st.session_state.df is None:
-                st.error("Dữ liệu chính chưa được tải. Không thể thêm.")
-            else:
-                new_bookings_list = []
-                skipped_count = 0
-                added_count = 0
+            if st.button("🔍 Trích xuất thông tin từ ảnh này", type="primary"):
+                with st.spinner("Đang phân tích ảnh và trích xuất danh sách đặt phòng..."):
+                    list_of_extracted_data = extract_booking_info_from_image_content(st.session_state.image_bytes_to_process)
+                    st.session_state.extracted_list_data = list_of_extracted_data
                 
-                main_df_booking_ids = set(st.session_state.df['Số đặt phòng'].astype(str).tolist())
-
-                for index, row in extracted_df.iterrows():
-                    if (row.get('errors') and any(row['errors'])) or not all([row.get('guest_name'), row.get('check_in_date'), row.get('check_out_date')]):
-                        skipped_count += 1
-                        continue
-                    
-                    if str(row.get('booking_id')) in main_df_booking_ids:
-                        skipped_count += 1
-                        continue
-
-                    check_in = row['check_in_date']
-                    check_out = row['check_out_date']
-                    stay_duration = (check_out - check_in).days if check_out > check_in else 0
-                    total_payment = float(row.get('total_payment', 0))
-                    price_per_night = round(total_payment / stay_duration) if stay_duration > 0 else 0.0
-
-                    new_booking_data = {
-                        'Tên chỗ nghỉ': row.get('room_type', 'N/A'),
-                        'Vị trí': "N/A (từ ảnh)",
-                        'Tên người đặt': row.get('guest_name'),
-                        'Thành viên Genius': row.get('genius_member', 'Không'),
-                        'Ngày đến': f"ngày {check_in.day} tháng {check_in.month} năm {check_in.year}",
-                        'Ngày đi': f"ngày {check_out.day} tháng {check_out.month} năm {check_out.year}",
-                        'Được đặt vào': f"ngày {datetime.date.today().day} tháng {datetime.date.today().month} năm {datetime.date.today().year}",
-                        'Tình trạng': row.get('status', 'OK'),
-                        'Tổng thanh toán': total_payment,
-                        'Hoa hồng': float(row.get('commission', 0)),
-                        'Tiền tệ': row.get('currency', 'VND'),
-                        'Số đặt phòng': str(row.get('booking_id', f"IMG_{datetime.datetime.now().strftime('%y%m%d%H%M%S')}_{index}")),
-                        'Check-in Date': pd.Timestamp(check_in),
-                        'Check-out Date': pd.Timestamp(check_out),
-                        'Booking Date': pd.Timestamp(datetime.date.today()),
-                        'Stay Duration': stay_duration,
-                        'Giá mỗi đêm': price_per_night,
-                        'Người thu tiền': "N/A"
-                    }
-                    new_bookings_list.append(new_booking_data)
-                    main_df_booking_ids.add(str(new_booking_data['Số đặt phòng']))
-                    added_count += 1
-
-                if new_bookings_list:
-                    new_bookings_df = pd.DataFrame(new_bookings_list)
-                    st.session_state.df = pd.concat([st.session_state.df, new_bookings_df], ignore_index=True)
-                    st.session_state.active_bookings = st.session_state.df[st.session_state.df['Tình trạng'] != 'Đã hủy'].copy()
-                    st.session_state.room_types = get_cleaned_room_types(st.session_state.df)
-                
-                st.session_state.last_action_message = f"✅ Hoàn tất! Đã thêm {added_count} đặt phòng mới. Bỏ qua {skipped_count} đặt phòng (do lỗi hoặc trùng lặp)."
-                st.session_state.extracted_list_data = None
-                st.session_state.image_bytes_to_process = None
+                # Kiểm tra kết quả và thông báo
+                if list_of_extracted_data and not (isinstance(list_of_extracted_data[0], dict) and list_of_extracted_data[0].get("errors")):
+                    st.success(f"Hoàn tất! Đã trích xuất được {len(list_of_extracted_data)} đặt phòng.")
+                else:
+                    error_msg = list_of_extracted_data[0].get("errors", ["Lỗi không xác định."]) if list_of_extracted_data else ["Không có dữ liệu trả về."]
+                    st.error(f"Không thể trích xuất dữ liệu. Lỗi: {error_msg[0]}")
                 st.rerun()
 
-        if st.button("Hủy và xóa kết quả", key="clear_image_list_results"):
-            st.session_state.extracted_list_data = None
-            st.session_state.image_bytes_to_process = None
-            st.rerun()
+        if st.session_state.extracted_list_data:
+            st.subheader("Kết quả trích xuất")
+            extracted_df = pd.DataFrame(st.session_state.extracted_list_data)
+            
+            display_cols = ['guest_name', 'check_in_date', 'check_out_date', 'room_type', 'total_payment', 'errors']
+            existing_display_cols = [col for col in display_cols if col in extracted_df.columns]
+            st.dataframe(extracted_df[existing_display_cols])
+
+            # Logic thêm vào hệ thống (giữ nguyên)
+            if st.button("➕ Thêm tất cả các đặt phòng hợp lệ vào hệ thống", key="add_all_from_image_list"):
+                if st.session_state.df is None:
+                    st.error("Dữ liệu chính chưa được tải. Không thể thêm.")
+                else:
+                    new_bookings_list = []
+                    skipped_count = 0
+                    added_count = 0
+                    
+                    main_df_booking_ids = set(st.session_state.df['Số đặt phòng'].astype(str).tolist())
+
+                    for index, row in extracted_df.iterrows():
+                        if (row.get('errors') and any(row['errors'])) or not all([row.get('guest_name'), row.get('check_in_date'), row.get('check_out_date')]):
+                            skipped_count += 1
+                            continue
+                        
+                        if str(row.get('booking_id')) in main_df_booking_ids:
+                            skipped_count += 1
+                            continue
+
+                        check_in = row['check_in_date']
+                        check_out = row['check_out_date']
+                        stay_duration = (check_out - check_in).days if check_out > check_in else 0
+                        total_payment = float(row.get('total_payment', 0))
+                        price_per_night = round(total_payment / stay_duration) if stay_duration > 0 else 0.0
+
+                        new_booking_data = {
+                            'Tên chỗ nghỉ': row.get('room_type', 'N/A'),
+                            'Vị trí': "N/A (từ ảnh)",
+                            'Tên người đặt': row.get('guest_name'),
+                            'Thành viên Genius': row.get('genius_member', 'Không'),
+                            'Ngày đến': f"ngày {check_in.day} tháng {check_in.month} năm {check_in.year}",
+                            'Ngày đi': f"ngày {check_out.day} tháng {check_out.month} năm {check_out.year}",
+                            'Được đặt vào': f"ngày {datetime.date.today().day} tháng {datetime.date.today().month} năm {datetime.date.today().year}",
+                            'Tình trạng': row.get('status', 'OK'),
+                            'Tổng thanh toán': total_payment,
+                            'Hoa hồng': float(row.get('commission', 0)),
+                            'Tiền tệ': row.get('currency', 'VND'),
+                            'Số đặt phòng': str(row.get('booking_id', f"IMG_{datetime.datetime.now().strftime('%y%m%d%H%M%S')}_{index}")),
+                            'Check-in Date': pd.Timestamp(check_in),
+                            'Check-out Date': pd.Timestamp(check_out),
+                            'Booking Date': pd.Timestamp(datetime.date.today()),
+                            'Stay Duration': stay_duration,
+                            'Giá mỗi đêm': price_per_night,
+                            'Người thu tiền': "N/A"
+                        }
+                        new_bookings_list.append(new_booking_data)
+                        main_df_booking_ids.add(str(new_booking_data['Số đặt phòng']))
+                        added_count += 1
+
+                    if new_bookings_list:
+                        new_bookings_df = pd.DataFrame(new_bookings_list)
+                        st.session_state.df = pd.concat([st.session_state.df, new_bookings_df], ignore_index=True)
+                        st.session_state.active_bookings = st.session_state.df[st.session_state.df['Tình trạng'] != 'Đã hủy'].copy()
+                        st.session_state.room_types = get_cleaned_room_types(st.session_state.df)
+                    
+                    st.session_state.last_action_message = f"✅ Hoàn tất! Đã thêm {added_count} đặt phòng mới. Bỏ qua {skipped_count} đặt phòng."
+                    # Xóa tất cả các state liên quan để reset tab
+                    st.session_state.extracted_list_data = None
+                    st.session_state.image_bytes_to_process = None
+                    st.session_state.pasted_component_value = None
+                    st.rerun()
+
+            if st.button("Hủy và xóa kết quả", key="clear_image_list_results"):
+                # Xóa tất cả các state liên quan để reset tab
+                st.session_state.extracted_list_data = None
+                st.session_state.image_bytes_to_process = None
+                st.session_state.pasted_component_value = None
+                st.rerun()
 
 # --- TAB THÊM ĐẶT PHÒNG MỚI ---
 with tab_add_booking:
